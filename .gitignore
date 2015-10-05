@@ -1,0 +1,6 @@
+.idea/
+_old/
+*~
+*.pyc
+resources/card_deck_BACKUP/
+resources/raw/
