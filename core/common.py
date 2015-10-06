@@ -15,13 +15,39 @@ PENDING = 0
 WAIT_FOR_NAME = 1
 ACCEPTED = 2
 
-# The misc message ids.
+# The user message ids.
 NEW_USER = 100
 USER_LEFT = 101
+CHAT = 102
+
+# The game message ids
+START_GAME = 200
+CARDS = 201
+ASK_TRICKS = 202
+SAY_TRICKS = 203
+PLAYER_SAID_TRICKS = 204
+ASK_CARD = 205
+SAY_CARD = 206
+ASK_TRUMP = 207
+SAY_TRUMP = 208
+FOUND_TRUMP = 209
 
 # The errors:
 FORBIDDEN_USERNAME = 400
-UNKNOWN_MESSAGE = 401
+TAKEN_USERNAME = 401
+UNKNOWN_MESSAGE = 402
+NOT_YOUR_TURN = 403
+INVALID_NUM_TRICKS = 404
+INVALID_TRUMP = 405
+INVALID_CARD = 406
+
+# The names of the colors.
+COLOR_NAMES = {"D": "Diamonds",
+               "H": "Hearts",
+               "S": "Spades",
+               "C": "Clubs",
+               "W": "Wizard",
+               "L": "Loser"}
 
 # The characters that are allowed to be sent over network:
 ALLOWED_CHARS = string.letters + string.digits + string.punctuation
@@ -29,6 +55,10 @@ CHAR_TRANS_TABLE = None
 
 
 def _create_char_trans_table():
+    """
+    Fill the character transformation table, so that it only keeps the characters from ALLOWED_CHARS, all other
+    characters will be replaced with spaces.
+    """
     global CHAR_TRANS_TABLE
     l = [" "] * 256
     for c in ALLOWED_CHARS:
