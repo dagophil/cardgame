@@ -31,6 +31,16 @@ SAY_CARD = 206
 ASK_TRUMP = 207
 SAY_TRUMP = 208
 FOUND_TRUMP = 209
+PLAYER_PLAYED_CARD = 210
+WINS_TRICK = 211
+MADE_POINTS = 212
+FINAL_POINTS = 213
+FINAL_WINNERS = 214
+
+# The server states.
+WAIT_FOR_SAY_TRUMP = 300
+WAIT_FOR_SAY_TRICKS = 301
+WAIT_FOR_SAY_CARD = 302
 
 # The errors:
 FORBIDDEN_USERNAME = 400
@@ -40,6 +50,8 @@ NOT_YOUR_TURN = 403
 INVALID_NUM_TRICKS = 404
 INVALID_TRUMP = 405
 INVALID_CARD = 406
+NOT_FOLLOWED_SUIT = 407
+INVALID_MOVE = 408
 
 # The names of the colors.
 COLOR_NAMES = {"D": "Diamonds",
@@ -48,6 +60,20 @@ COLOR_NAMES = {"D": "Diamonds",
                "C": "Clubs",
                "W": "Wizard",
                "L": "Loser"}
+
+NUMERIC_VALUES = {"2": 2,
+                  "3": 3,
+                  "4": 4,
+                  "5": 5,
+                  "6": 6,
+                  "7": 7,
+                  "8": 8,
+                  "9": 9,
+                  "T": 10,
+                  "J": 11,
+                  "Q": 12,
+                  "K": 13,
+                  "A": 14}
 
 # The characters that are allowed to be sent over network:
 ALLOWED_CHARS = string.letters + string.digits + string.punctuation

@@ -3,6 +3,8 @@
 - The game is played with "low 10", meaning the card order is 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K, A.
 - In round k, each player gets k cards.
 - In round k, the sum of all said tricks must not be equal to k.
+- If more than one player play wizards, the first wizard wins.
+- If everyone plays a jester, the last player wins.
 
 ## Server:
 - Wait for n clients.

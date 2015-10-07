@@ -120,7 +120,12 @@ class ClientConnection(LineReceiver):
 
         if self._state == cmn.PENDING:
             # Check if the handshake number is correct.
-            if int(line) == cmn.handshake_fun(self._id):
+            non_wizard = False
+            try:
+                line = int(line)
+            except ValueError:
+                non_wizard = True
+            if not non_wizard and line == cmn.handshake_fun(self._id):
                 self._state = cmn.WAIT_FOR_NAME
                 self.send(self._state)
             else:
@@ -163,7 +168,7 @@ class ClientConnection(LineReceiver):
         self._state = cmn.ACCEPTED
         self.clients[self._id] = self
         logging.info("%s chooses username '%s'" % (self.hostname, self.username))
-        self.send_all_others("%d#%s" % (cmn.NEW_USER, self.username))
+        self.send_all("%d#%s" % (cmn.NEW_USER, self.username))
 
         if len(self.clients) == self.game.num_players:
             self._start_game()
@@ -203,7 +208,7 @@ class ClientConnection(LineReceiver):
         if msg_id == cmn.CHAT:
             # Attach the username and send the message to the other players. Since the username is alpha numeric, it
             # cannot contain "#", so we can use that to separate the username from the message.
-            self.send_all_others("%d#%s#%s" % (cmn.CHAT, self.username, msg))
+            self.send_all("%d#%s#%s" % (cmn.CHAT, self.username, msg))
             return
 
         if msg_id in [cmn.SAY_TRUMP, cmn.SAY_TRICKS, cmn.SAY_CARD]:
@@ -216,6 +221,13 @@ class ClientConnection(LineReceiver):
                 logging.warning("%s tried to play, but it is not his turn." % self.username)
                 self.send("%d#%s" % (cmn.NOT_YOUR_TURN, self.game.current_player_username))
                 return
+
+        if msg_id == cmn.SAY_TRUMP and self.game.state != cmn.WAIT_FOR_SAY_TRUMP \
+                or msg_id == cmn.SAY_TRICKS and self.game.state != cmn.WAIT_FOR_SAY_TRICKS \
+                or msg_id == cmn.SAY_CARD and self.game.state != cmn.WAIT_FOR_SAY_CARD:
+            logging.warning("%s tried to make a move that is not possible right now." % self.username)
+            self.send("%d#%d" % (cmn.INVALID_MOVE, msg_id))
+            return
 
         if msg_id == cmn.SAY_TRUMP:
             # Parse the trump.
@@ -252,17 +264,26 @@ class WizardGame(object):
     Holds and manages the game states.
     """
 
-    def __init__(self, num_players):
+    def __init__(self, num_players, num_rounds=None):
         self.num_players = num_players
         self._num_rounds = 60 / self.num_players  # integer division will floor this
+        if num_rounds is not None:
+            if num_rounds > self._num_rounds:
+                logging.warning("Tried to set number of rounds to %d, but the maximum is %d." % (num_rounds, self._num_rounds))
+            else:
+                self._num_rounds = num_rounds
         self._clients = None
         self._player_ids = None
         self._deck = None
         self._round = 0
-        self._tricks = None
+        self._said_tricks = None
+        self._made_tricks = None
         self._player_cards = None
+        self._trick_cards = None
         self.current_player = 0
         self.trump = None
+        self._points = []
+        self.state = None
 
     @staticmethod
     def _create_cards():
@@ -283,6 +304,7 @@ class WizardGame(object):
         self._clients = clients
         self._player_ids = self._clients.keys()
         random.shuffle(self._player_ids)
+        logging.info("The seat order is %s." % ", ".join(self._clients[p].username for p in self._player_ids))
 
         # Send the player order to all clients.
         msg = json.dumps([self._clients[i].username for i in self._player_ids])
@@ -355,8 +377,11 @@ class WizardGame(object):
         """
         self._round += 1
         self.current_player = self._round % self.num_players
-        self._tricks = [0] * self.num_players
-        logging.info("Playing round %d." % self._round)
+        self._said_tricks = [0] * self.num_players
+        self._made_tricks = [0] * self.num_players
+        self._trick_cards = []
+        logging.info("Playing round %d of %d." % (self._round, self._num_rounds))
+        logging.info("%s starts." % self.current_player_username)
 
         # Shuffle the cards.
         self._deck = self._create_cards()
@@ -384,7 +409,6 @@ class WizardGame(object):
             self.trump = "L"
         else:
             self.trump = "W"
-        self.trump = "W"
 
         # Send the trump to all players.
         logging.info("The trump suit is %s." % cmn.COLOR_NAMES[self.trump])
@@ -392,9 +416,11 @@ class WizardGame(object):
 
         if self.trump == "W":
             # Ask the first player for the trump.
+            self.state = cmn.WAIT_FOR_SAY_TRUMP
             self.current_client.send("%d#0" % cmn.ASK_TRUMP)
         else:
             # Ask the first player how many tricks he makes.
+            self.state = cmn.WAIT_FOR_SAY_TRICKS
             self.current_client.send("%d#%d" % (cmn.ASK_TRICKS, self._round))
 
     def say_trump(self, trump):
@@ -405,6 +431,7 @@ class WizardGame(object):
         self.trump = trump
         logging.info("%s chose the trump suit %s." % (self.current_player_username, trump))
         self.current_client.send_all("%d#%s" % (cmn.FOUND_TRUMP, self.trump))
+        self.state = cmn.WAIT_FOR_SAY_TRICKS
         self.current_client.send("%d#%d" % (cmn.ASK_TRICKS, self._round))
 
     def say_tricks(self, num_tricks):
@@ -415,7 +442,7 @@ class WizardGame(object):
         """
         # Check if the number of tricks is valid.
         num_tricks_in_range = 0 <= num_tricks <= self._round
-        num_tricks_equals_round = sum(self._tricks) + num_tricks == self._round
+        num_tricks_equals_round = sum(self._said_tricks) + num_tricks == self._round
         if (not num_tricks_in_range) or (self.is_last_player and num_tricks_equals_round):
             logging.warning("%s said invalid number of tricks: %d" % (self.current_player_username, num_tricks))
             self.current_client.send("%d#%d" % (cmn.INVALID_NUM_TRICKS, num_tricks))
@@ -423,25 +450,144 @@ class WizardGame(object):
 
         # Tell all players what was played.
         logging.info("%s said %d tricks." % (self.current_player_username, num_tricks))
-        self.current_client.send_all_others("%d#%s#%d" % (cmn.PLAYER_SAID_TRICKS, self.current_player_username, num_tricks))
+        self.current_client.send_all("%d#%s#%d" % (cmn.PLAYER_SAID_TRICKS, self.current_player_username, num_tricks))
 
         # Save the said number.
-        self._tricks[self.current_player] = num_tricks
+        self._said_tricks[self.current_player] = num_tricks
         self.current_player = (self.current_player+1) % self.num_players
 
         # Ask the next player to say the tricks or to play the card.
         if not self.is_first_player:
+            self.state = cmn.WAIT_FOR_SAY_TRICKS
             self.current_client.send("%d#%d" % (cmn.ASK_TRICKS, self._round))
         else:
-            self.current_client.send("%d#%s" % (cmn.ASK_CARD, str(self.current_player_cards)))
+            self.state = cmn.WAIT_FOR_SAY_CARD
+            self.current_client.send("%d#%s" % (cmn.ASK_CARD, json.dumps(self.current_player_cards)))
 
-    def say_card(self, card):
+    def say_card(self, played_card):
         """
         Save the card that the current player played and ask the next player.
         If all players played, find out who won.
-        :param card: the card
+        :param played_card: the played card
         """
-        logging.warning("%s said %s, and now we have to handle this." % (self.current_player_username, card))
+        # Check if the player followed suit.
+        played_colors = [card[0] for card in self._trick_cards if card[0] not in ["W", "L"]]
+        if len(played_colors) > 0:
+            # Someone has played a suit already. This is not always the case:
+            # There is no suit if the first cards where wizards / losers and when the first card has not been played at
+            # all.
+            follow_suit = played_colors[0][0]
+            if played_card[0] not in ["W", "L", follow_suit]:
+                # The player did not follow suit. This is only okay, if none of the hand cards are of the suit.
+                player_colors = [card[0] for card in self.current_player_cards]
+                if follow_suit in player_colors:
+                    logging.warning("%s did not follow suit." % self.current_player_username)
+                    self.current_client.send("%d#%s#%s" % (cmn.NOT_FOLLOWED_SUIT, follow_suit, played_card))
+                    return
+
+        # Tell all players what was played.
+        logging.info("%s played %s." % (self.current_player_username, played_card))
+        self.current_client.send_all("%d#%s#%s" % (cmn.PLAYER_PLAYED_CARD, self.current_player_username, played_card))
+
+        # Save the played card.
+        self._trick_cards.append(played_card)
+        self.current_player_cards.remove(played_card)
+        self.current_player = (self.current_player+1) % self.num_players
+
+        # Ask the next player to play the card or find the winner.
+        if len(self._trick_cards) < self.num_players:
+            self.current_client.send("%d#%s" % (cmn.ASK_CARD, json.dumps(self.current_player_cards)))
+        else:
+            self._find_trick_winner()
+
+    def _find_trick_winner(self):
+        """
+        Find the winner of the current trick.
+        """
+        played_colors = [card[0] for card in self._trick_cards]
+        if "W" in played_colors:
+            # Someone played a wizard => first wizard wins.
+            winner_index = played_colors.index("W")
+            winner = (self.current_player + winner_index) % self.num_players
+        elif all(c == "L" for c in played_colors):
+            # Everyone played a jester => last player wins.
+            winner = (self.current_player - 1) % self.num_players
+        elif self.trump != "L" and any(card[0] == self.trump for card in self._trick_cards):
+            # No wizards, but trump was played => the highest trump wins.
+            trump_values = [(card[1], i) for i, card in enumerate(self._trick_cards) if card[0] == self.trump]
+            trump_values = [(cmn.NUMERIC_VALUES[x[0]], x[1]) for x in trump_values]
+            winner_index = max(trump_values)[1]
+            winner = (self.current_player+winner_index) % self.num_players
+        else:
+            # No wizards and no trump => the highest card that followed suit wins.
+            follow_suit = (c for c in played_colors if c not in ["W", "L"]).next()
+            suit_values = [(card[1], i) for i, card in enumerate(self._trick_cards) if card[0] == follow_suit]
+            suit_values = [(cmn.NUMERIC_VALUES[x[0]], x[1]) for x in suit_values]
+            winner_index = max(suit_values)[1]
+            winner = (self.current_player+winner_index) % self.num_players
+
+        # The next trick starts with the winner.
+        self.current_player = winner
+        self._trick_cards = []
+
+        # Save the winner.
+        self._made_tricks[winner] += 1
+        logging.info("%s wins the trick." % self.current_player_username)
+        self.current_client.send_all("%d#%s" % (cmn.WINS_TRICK, self.current_player_username))
+
+        # Ask the next player to play the card or compute the result of this round.
+        if sum(self._made_tricks) < self._round:
+            self.current_client.send("%d#%s" % (cmn.ASK_CARD, json.dumps(self.current_player_cards)))
+        else:
+            self._compute_round_result()
+
+    def _compute_round_result(self):
+        """
+        Compute the result of the current round.
+        """
+        points = []
+        for i in xrange(self.num_players):
+            diff = abs(self._said_tricks[i] - self._made_tricks[i])
+            if diff == 0:
+                points.append(20 + 10*self._made_tricks[i])
+            else:
+                points.append(-10*diff)
+
+        logging.info("Round ended. The round points in seat order: %s." % ", ".join(str(x) for x in points))
+        self.current_client.send_all("%d#%s" % (cmn.MADE_POINTS, json.dumps(points)))
+        self._points.append(points)
+
+        # Start the next round or compute the final results.
+        if self._round < self._num_rounds:
+            self._next_round()
+        else:
+            self._compute_final_result()
+
+    def _compute_final_result(self):
+        """
+        Compute the final result of the game.
+        """
+        points = [sum(x) for x in zip(*self._points)]
+        logging.info("The final points in seat order: %s." % ", ".join(str(x) for x in points))
+        self.current_client.send_all("%d#%s" % (cmn.FINAL_POINTS, json.dumps(points)))
+
+        # Find the winners.
+        max_points = max(points)
+        search_start = 0
+        winners = []
+        for i in xrange(points.count(max_points)):
+            winner_index = points.index(max_points, search_start)
+            search_start = winner_index + 1
+            winner_client = self._clients[self._player_ids[winner_index]]
+            winners.append((winner_client.username, max_points))
+
+        # Announce the winners.
+        self.current_client.send_all("%d#%s" % (cmn.FINAL_WINNERS, json.dumps(winners)))
+        if len(winners) == 1:
+            logging.info("The winners: %s." % ", ".join(w[0] for w in winners))
+
+        # Exit the game.
+        reactor.stop()
 
 
 class ClientConnector(Factory):
@@ -460,12 +606,13 @@ class ClientConnector(Factory):
         return ClientConnection(self, addr.host, addr.port)
 
 
-
 parser = argparse.ArgumentParser(description="Wizard cardgame - Server")
 parser.add_argument("--port", type=int, required=True,
                     help="listen port for incoming connections")
 parser.add_argument("-n", "--num_players", type=int, required=True,
                     help="number of players")
+parser.add_argument("-k", "--num_rounds", type=int, default=None,
+                    help="number of rounds, default: floor(60/num_players)")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="show verbose output")
 parser.add_argument("--debug", action="store_true")
@@ -492,7 +639,7 @@ def main(args):
     assert args.num_players > 0
 
     # Start the reactor.
-    reactor.listenTCP(args.port, ClientConnector(WizardGame(args.num_players)))
+    reactor.listenTCP(args.port, ClientConnector(WizardGame(args.num_players, args.num_rounds)))
     logging.info("Server is running.")
     reactor.run()
     logging.info("Shutdown successful.")
