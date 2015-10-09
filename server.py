@@ -604,7 +604,8 @@ parser.add_argument("-k", "--num_rounds", type=int, default=None,
                     help="number of rounds, default: floor(60/num_players)")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="show verbose output")
-parser.add_argument("--debug", action="store_true")
+parser.add_argument("--debug", action="store_true",
+                    help="show debug output")
 
 
 def main(args):
