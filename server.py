@@ -387,6 +387,10 @@ class WizardGame(object):
         self._deck = self._create_cards()
         random.shuffle(self._deck)
 
+        # Find the trump card.
+        r = random.randint(0, 59)
+        self.trump = self._deck[r][0]
+
         # Send the cards to the players.
         self._player_cards = [None] * self.num_players
         for i, player_id in enumerate(self._player_ids):
@@ -394,21 +398,6 @@ class WizardGame(object):
             self._player_cards[i], self._deck = self._deck[:self._round], self._deck[self._round:]
             msg = json.dumps(self._player_cards[i])
             client.send("%d#%s" % (cmn.CARDS, msg))
-
-        # Find the trump.
-        r = random.randint(1, 60)
-        if r <= 13:
-            self.trump = "D"
-        elif r <= 26:
-            self.trump = "H"
-        elif r <= 39:
-            self.trump = "S"
-        elif r <= 52:
-            self.trump = "C"
-        elif r <= 56:
-            self.trump = "L"
-        else:
-            self.trump = "W"
 
         # Send the trump to all players.
         logging.info("The trump suit is %s." % cmn.COLOR_NAMES[self.trump])
