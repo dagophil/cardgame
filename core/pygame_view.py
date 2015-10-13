@@ -2,17 +2,25 @@ import pygame
 
 
 class PygameView(object):
+    """
+    This view should be subclassed by all pygame views. It enables safe access to the screen.
+    """
 
-    def __init__(self):
-        self.width = None
-        self.height = None
-        self._screen = None
+    _screen = None
 
-    def init(self, width, height):
-        self.width = width
-        self.height = height
-        pygame.display.set_mode((self.width, self.height))
-        self._screen = pygame.display.get_surface()
+    @property
+    def screen(self):
+        """
+        Return the screen.
+        :return: the screen
+        """
+        return PygameView._screen
 
-    def exit(self):
-        pygame.quit()
+    @staticmethod
+    def init(width, height):
+        """
+        Initialize the screen.
+        :param width: screen width
+        :param height: screen height
+        """
+        PygameView._screen = pygame.display.set_mode((width, height))
