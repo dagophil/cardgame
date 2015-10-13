@@ -76,7 +76,7 @@ NUMERIC_VALUES = {"2": 2,
                   "A": 14}
 
 # The characters that are allowed to be sent over network:
-ALLOWED_CHARS = string.letters + string.digits + string.punctuation
+ALLOWED_CHARS = string.letters + string.digits + string.punctuation + " "
 CHAR_TRANS_TABLE = None
 
 

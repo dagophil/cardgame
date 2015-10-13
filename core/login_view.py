@@ -17,6 +17,7 @@ INPUT_FILL_COLOR = (0, 0, 0, 128)
 INPUT_WIDTH = 200
 INPUT_PADDING = (5, 5, 5, 5)
 INPUT_OFFSET = 40
+BLINK_TIME = 0.5
 
 
 class LoginView(PygameView):
@@ -31,6 +32,8 @@ class LoginView(PygameView):
         self._resource_manager = ResourceManager.instance()
 
         self._focused = None
+        self._blink = False
+        self._blink_time = 0
 
         # Get the background image.
         self._background = self._resource_manager.get_image(BACKGROUND_IMAGE, self.screen.get_size())
@@ -40,13 +43,13 @@ class LoginView(PygameView):
         self._default_font = self._resource_manager.get_font(FONT_ITALIC, FONT_SIZE)
 
         # Create the text inputs.
-        self._username_input = TextInput(self._font, INPUT_WIDTH, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
-                                         fill=INPUT_FILL_COLOR, default_text="username",
-                                         default_font=self._default_font)
-        self._host_input = copy.copy(self._username_input)
-        self._host_input.default_text = "host"
-        self._port_input = copy.copy(self._username_input)
-        self._port_input.default_text = "port"
+        self.username_input = TextInput(self._font, INPUT_WIDTH, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
+                                        fill=INPUT_FILL_COLOR, default_text="username",
+                                        default_font=self._default_font)
+        self.host_input = copy.copy(self.username_input)
+        self.host_input.default_text = "host"
+        self.port_input = copy.copy(self.username_input)
+        self.port_input.default_text = "port"
 
     @property
     def input_x(self):
@@ -58,14 +61,25 @@ class LoginView(PygameView):
 
     @property
     def input_height(self):
-        return self._username_input.render_height
+        return self.username_input.render_height
 
-    def focus(self, s):
+    @property
+    def focused(self):
+        """
+        Return the name of the focused input field.
+        :return: name of the focused input field
+        """
+        return self._focused
+
+    @focused.setter
+    def focused(self, s):
         """
         Set to focus to the given input. s must be either None, "username", "host", "port".
         :param s: the input
         """
         assert s in [None, "username", "host", "port"]
+        self._blink = True
+        self._blink_time = 0
         self._focused = s
 
     def object_at(self, x, y):
@@ -95,8 +109,16 @@ class LoginView(PygameView):
             x = self.input_x
             y = self.input_y
 
-            self._username_input.render(self.screen, (x, y))
-            self._host_input.render(self.screen, (x, y+INPUT_OFFSET))
-            self._port_input.render(self.screen, (x, y+2*INPUT_OFFSET))
+            # Update the blinking cursor.
+            self._blink_time += event.elapsed_time
+            blink_counts = int(self._blink_time / BLINK_TIME)
+            self._blink_time %= BLINK_TIME
+            if blink_counts % 2 == 1:
+                self._blink = not self._blink
+
+            # Render the input widgets.
+            self.username_input.render(self.screen, (x, y), focused=(self.focused == "username"), blink=self._blink)
+            self.host_input.render(self.screen, (x, y+INPUT_OFFSET), focused=(self.focused == "host"), blink=self._blink)
+            self.port_input.render(self.screen, (x, y+2*INPUT_OFFSET), focused=(self.focused == "port"), blink=self._blink)
 
             pygame.display.flip()

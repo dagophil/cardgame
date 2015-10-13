@@ -32,17 +32,23 @@ class TextInput(object):
     def offset(self):
         return self.padding[3], self.padding[0]
 
-    def render(self, surface, position):
+    def render(self, surface, position, focused=False, blink=False):
         """
         Render the widget to the given surface at the given position.
         :param surface: the surface
         :param position: the position
+        :param focused: if this is True, the default text is not shown
+        :param blink: if this is True and the widget is focused, append a blinking cursor
         """
         s = pygame.Surface((self.render_width, self.render_height), flags=pygame.SRCALPHA)
         s.fill(self.fill)
-        if len(self.text) > 0:
-            font_obj = self.font.render(self.text, True, self.color)
+        if blink and focused:
+            app = "|"
         else:
-            font_obj = self.default_font.render(self.default_text, True, self.color)
+            app = ""
+        if len(self.text) > 0 or focused:
+            font_obj = self.font.render(self.text+app, True, self.color)
+        else:
+            font_obj = self.default_font.render(self.default_text+app, True, self.color)
         s.blit(font_obj, self.offset)
         surface.blit(s, position)
