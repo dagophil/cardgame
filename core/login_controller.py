@@ -2,6 +2,11 @@ import events
 from login_model import LoginModel
 from login_view import LoginView
 from pygame_controller import PygameController
+import pygame
+
+
+CURSOR_POINTER = pygame.cursors.arrow
+CURSOR_HOVER = pygame.cursors.tri_left
 
 
 class LoginController(PygameController):
@@ -24,4 +29,16 @@ class LoginController(PygameController):
         super(LoginController, self).notify(event)
 
         if isinstance(event, events.TickEvent):
-            pass
+            for pygame_event in self.events():
+                if pygame_event.type == pygame.MOUSEMOTION:
+                    # Change the cursor when an input field is hovered.
+                    sx, sy = pygame_event.pos
+                    hov = self._view.object_at(sx, sy)
+                    if hov is None:
+                        pygame.mouse.set_cursor(*CURSOR_POINTER)
+                    else:
+                        pygame.mouse.set_cursor(*CURSOR_HOVER)
+                elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
+                    sx, sy = pygame_event.pos
+                    hov = self._view.object_at(sx, sy)
+                    self._view.focus(hov)
