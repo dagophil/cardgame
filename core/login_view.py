@@ -43,13 +43,13 @@ class LoginView(PygameView):
         self._default_font = self._resource_manager.get_font(FONT_ITALIC, FONT_SIZE)
 
         # Create the text inputs.
-        self.username_input = TextInput(self._font, INPUT_WIDTH, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
+        self._username_input = TextInput(self._font, INPUT_WIDTH, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
                                         fill=INPUT_FILL_COLOR, default_text="username",
                                         default_font=self._default_font)
-        self.host_input = copy.copy(self.username_input)
-        self.host_input.default_text = "host"
-        self.port_input = copy.copy(self.username_input)
-        self.port_input.default_text = "port"
+        self._host_input = copy.copy(self._username_input)
+        self._host_input.default_text = "host"
+        self._port_input = copy.copy(self._username_input)
+        self._port_input.default_text = "port"
 
     @property
     def input_x(self):
@@ -61,7 +61,7 @@ class LoginView(PygameView):
 
     @property
     def input_height(self):
-        return self.username_input.render_height
+        return self._username_input.render_height
 
     @property
     def focused(self):
@@ -101,6 +101,10 @@ class LoginView(PygameView):
         Handle the given event.
         :param event: the event
         """
+        d = {"username": self._username_input,
+             "host": self._host_input,
+             "port": self._port_input}
+
         if isinstance(event, events.InitEvent):
             pass
         elif isinstance(event, events.TickEvent):
@@ -117,8 +121,14 @@ class LoginView(PygameView):
                 self._blink = not self._blink
 
             # Render the input widgets.
-            self.username_input.render(self.screen, (x, y), focused=(self.focused == "username"), blink=self._blink)
-            self.host_input.render(self.screen, (x, y+INPUT_OFFSET), focused=(self.focused == "host"), blink=self._blink)
-            self.port_input.render(self.screen, (x, y+2*INPUT_OFFSET), focused=(self.focused == "port"), blink=self._blink)
+            self._username_input.render(self.screen, (x, y), focused=(self.focused == "username"), blink=self._blink)
+            self._host_input.render(self.screen, (x, y+INPUT_OFFSET), focused=(self.focused == "host"), blink=self._blink)
+            self._port_input.render(self.screen, (x, y+2*INPUT_OFFSET), focused=(self.focused == "port"), blink=self._blink)
 
             pygame.display.flip()
+        elif isinstance(event, events.AttachCharEvent):
+            inp = d[event.entity_name]
+            inp.text += event.char
+        elif isinstance(event, events.RemoveCharEvent):
+            inp = d[event.entity_name]
+            inp.text = inp.text[:-event.n]

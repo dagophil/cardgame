@@ -60,12 +60,12 @@ class LoginController(PygameController):
                 elif pygame_event.type == pygame.KEYDOWN:
                     # Append the pressed key to the focused input field (or delete the last char on backspace).
                     # TODO: If a key stays pressed for a short time, repeatedly print the key.
-                    d = {"username": (self._view.username_input, isalnum),
-                         "host": (self._view.host_input, isallowed),
-                         "port": (self._view.port_input, isdigit)}
+                    d = {"username": isalnum,
+                         "host": isallowed,
+                         "port": isdigit}
                     if self._view.focused in d:
-                        input_field, valid = d[self._view.focused]
+                        valid = d[self._view.focused]
                         if valid(pygame_event.unicode):
-                            input_field.text += pygame_event.unicode
+                            self._ev_manager.post(events.AttachCharEvent(self._view.focused, pygame_event.unicode))
                         elif pygame_event.key == pygame.K_BACKSPACE:
-                            input_field.text = input_field.text[:-1]
+                            self._ev_manager.post(events.RemoveCharEvent(self._view.focused, 1))

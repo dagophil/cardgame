@@ -1,5 +1,5 @@
-## A python implementation of the wizard card game.
-Soon, you can play the famous wizard card game online.
+## A python implementation of a card game.
+Soon, you can play a famous card game online.
 
 ### What is done so far (newest on top):
 - The server is complete.

@@ -26,6 +26,18 @@ class CloseCurrentModelEvent(Event):
         self.next_model_name = next_model_name
 
 
+class AttachCharEvent(Event):
+    def __init__(self, entity_name, char):
+        self.entity_name = entity_name
+        self.char = char
+
+
+class RemoveCharEvent(Event):
+    def __init__(self, entity_name, n):
+        self.entity_name = entity_name
+        self.n = n
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.
