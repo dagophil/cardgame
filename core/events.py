@@ -40,6 +40,10 @@ class RemoveCharEvent(Event):
         self.n = n
 
 
+class LoginRequestedEvent(Event):
+    pass
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.

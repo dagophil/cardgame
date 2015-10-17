@@ -26,11 +26,8 @@ class LoginController(PygameController):
     """
 
     def __init__(self, ev_manager, model, view):
-        super(LoginController, self).__init__(ev_manager)
+        super(LoginController, self).__init__(ev_manager, model, view)
         assert isinstance(model, LoginModel)
-        assert isinstance(view, LoginView)
-        self._model = model
-        self._view = view
 
     def notify(self, event):
         """
@@ -41,22 +38,13 @@ class LoginController(PygameController):
 
         if isinstance(event, events.TickEvent):
             for pygame_event in self.events():
-                if pygame_event.type == pygame.MOUSEMOTION:
-                    sx, sy = pygame_event.pos
-                    self._view.hover(sx, sy)
-                elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
-                    sx, sy = pygame_event.pos
-                    self._view.mouse_down(sx, sy)
-                elif pygame_event.type == pygame.MOUSEBUTTONUP:
-                    sx, sy = pygame_event.pos
-                    self._view.mouse_up(sx, sy)
-                elif pygame_event.type == pygame.KEYDOWN:
+                if pygame_event.type == pygame.KEYDOWN:
                     # Append the pressed key to the focused input field (or delete the last char on backspace).
                     # TODO: If a key stays pressed for a short time, repeatedly print the key.
                     d = {"username": isalnum,
                          "host": isallowed,
                          "port": isdigit}
-                    w = self._view.get_focused_widget()
+                    w = self.view.get_focused_widget()
                     if isinstance(w, TextInput):
                         t = w.default_text
                         valid = d[t]
@@ -64,3 +52,7 @@ class LoginController(PygameController):
                             self._ev_manager.post(events.AttachCharEvent(w, t, pygame_event.unicode))
                         elif pygame_event.key == pygame.K_BACKSPACE:
                             self._ev_manager.post(events.RemoveCharEvent(w, t, 1))
+
+        elif isinstance(event, events.LoginRequestedEvent):
+            logging.debug("Login requested: Username: '%s', host: '%s', port: '%s'" %
+                          (self.model.username, self.model.host, self.model.port))

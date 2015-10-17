@@ -83,6 +83,10 @@ class LoginView(PygameView):
         btn = Button((0, 3*INPUT_OFFSET), (w, h), 0, btn_bg, btn_hover, btn_pressed)
         input_container.add_widget(btn)
 
+        def btn_clicked(x, y):
+            self._ev_manager.post(events.LoginRequestedEvent())
+        btn.handle_clicked = btn_clicked
+
         return bg_widget
 
     def notify(self, event):
