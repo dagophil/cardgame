@@ -11,9 +11,10 @@ RESET = colorama.Style.RESET_ALL
 
 
 # The client states:
-PENDING = 0
-WAIT_FOR_NAME = 1
-ACCEPTED = 2
+WAIT_FOR_HANDSHAKE = 0
+PENDING = 1
+WAIT_FOR_NAME = 2
+ACCEPTED = 3
 
 # The user message ids.
 NEW_USER = 100

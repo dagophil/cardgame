@@ -6,6 +6,7 @@ import pygame
 import common as cmn
 import logging
 from widgets import TextInput, Button
+from game_network_controller import GameNetworkController
 
 
 def isalnum(s):
@@ -29,6 +30,8 @@ class LoginController(PygameController):
         super(LoginController, self).__init__(ev_manager, view)
         assert isinstance(model, LoginModel)
         self._model = model
+        self._network_controller = GameNetworkController(self._ev_manager)
+        self._network_running = False
 
     def notify(self, event):
         """
@@ -57,3 +60,34 @@ class LoginController(PygameController):
         elif isinstance(event, events.LoginRequestedEvent):
             logging.debug("Login requested: Username: '%s', host: '%s', port: '%s'" %
                           (self._model.username, self._model.host, self._model.port))
+
+            # Check the username.
+            if len(self._model.username) == 0:
+                logging.warning("Username must not have length 0.")
+                self._ev_manager.post(events.InvalidUsernameEvent())
+                return
+            self._network_controller.username = self._model.username
+
+            # Check the port.
+            try:
+                port = int(self._model.port)
+            except ValueError:
+                logging.warning("Could not convert port %s to int." % self._model.port)
+                return
+
+            if self._network_running:
+                # Send the new username.
+                self._network_controller.update_username(self._model.username)
+            else:
+                # Build the connection.
+                self._network_controller.connect(self._model.host, port)
+                self._network_running = True
+
+        elif isinstance(event, events.ConnectionFailedEvent) or isinstance(event, events.ConnectionLostEvent):
+            self._network_running = False
+
+        elif isinstance(event, events.TakenUsernameEvent):
+            logging.warning("TODO: Show a message that the username was taken.")
+
+        elif isinstance(event, events.AcceptedUsernameEvent):
+            logging.warning("TODO: Continue after the username was accepted.")

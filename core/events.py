@@ -44,6 +44,35 @@ class LoginRequestedEvent(Event):
     pass
 
 
+class ConnectionMadeEvent(Event):
+    pass
+
+
+class ConnectionLostEvent(Event):
+    pass
+
+
+class ConnectionFailedEvent(Event):
+    pass
+
+
+class LineReceivedEvent(Event):
+    def __init__(self, line):
+        self.line = line
+
+
+class InvalidUsernameEvent(Event):
+    pass
+
+
+class TakenUsernameEvent(Event):
+    pass
+
+
+class AcceptedUsernameEvent(Event):
+    pass
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.
@@ -86,7 +115,6 @@ class EventManager(object):
         if isinstance(event, TickEvent) or isinstance(event, InitEvent):
             while len(self._queue) > 0:
                 ev = self._queue.popleft()
-
                 # Iterate over a copy of the dict, so even from within the loop, listeners can delete themselves.
                 for l in list(self._listeners):
                     l.notify(ev)
