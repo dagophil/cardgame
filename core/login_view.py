@@ -68,16 +68,18 @@ class LoginView(PygameView):
 
         # Create the button widget.
         h = 100
-        btn_bg = pygame.Surface((w, h), flags=pygame.SRCALPHA)
-        btn_bg.fill((0, 0, 0, 255))
         btn_font_obj = self._font.render("Login", True, (255, 255, 255, 255))
-        btn_bg.blit(btn_font_obj, (0, 0))
+        offset_x = (w - btn_font_obj.get_width()) / 2
+        offset_y = (h - btn_font_obj.get_height()) / 2
+        btn_bg = pygame.Surface((w, h), flags=pygame.SRCALPHA)
+        btn_bg.fill((0, 0, 0, 128))
+        btn_bg.blit(btn_font_obj, (offset_x, offset_y))
         btn_hover = pygame.Surface((w, h), flags=pygame.SRCALPHA)
-        btn_hover.fill((255, 0, 0, 255))
-        btn_hover.blit(btn_font_obj, (0, 0))
+        btn_hover.fill((0, 0, 0, 160))
+        btn_hover.blit(btn_font_obj, (offset_x, offset_y))
         btn_pressed = pygame.Surface((w, h), flags=pygame.SRCALPHA)
-        btn_pressed.fill((0, 255, 0, 255))
-        btn_pressed.blit(btn_font_obj, (0, 0))
+        btn_pressed.fill((0, 0, 0, 200))
+        btn_pressed.blit(btn_font_obj, (offset_x, offset_y))
         btn = Button((0, 3*INPUT_OFFSET), (w, h), 0, btn_bg, btn_hover, btn_pressed)
         input_container.add_widget(btn)
 
