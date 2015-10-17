@@ -26,8 +26,9 @@ class LoginController(PygameController):
     """
 
     def __init__(self, ev_manager, model, view):
-        super(LoginController, self).__init__(ev_manager, model, view)
+        super(LoginController, self).__init__(ev_manager, view)
         assert isinstance(model, LoginModel)
+        self._model = model
 
     def notify(self, event):
         """
@@ -55,4 +56,4 @@ class LoginController(PygameController):
 
         elif isinstance(event, events.LoginRequestedEvent):
             logging.debug("Login requested: Username: '%s', host: '%s', port: '%s'" %
-                          (self.model.username, self.model.host, self.model.port))
+                          (self._model.username, self._model.host, self._model.port))
