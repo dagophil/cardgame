@@ -58,7 +58,7 @@ class EventManager(object):
         """
         listener_id = self._next_id
         self._next_id += 1
-        self._listeners[listener] = id
+        self._listeners[listener] = listener_id
         logging.debug("Registered listener %s with id %d." % (listener.__class__.__name__, listener_id))
         return listener_id
 

@@ -47,7 +47,7 @@ class LoginController(PygameController):
                 if pygame_event.type == pygame.MOUSEMOTION:
                     # Change the cursor when an input field is hovered.
                     sx, sy = pygame_event.pos
-                    hov = self._view.object_at(sx, sy)
+                    hov = self._view.get_hovered(sx, sy)
                     if hov is None:
                         pygame.mouse.set_cursor(*CURSOR_POINTER)
                     else:
@@ -55,17 +55,18 @@ class LoginController(PygameController):
                 elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
                     # Focus the current input field.
                     sx, sy = pygame_event.pos
-                    hov = self._view.object_at(sx, sy)
-                    self._view.focused = hov
+                    hov = self._view.get_hovered(sx, sy)
+                    self._view.focus(hov)
                 elif pygame_event.type == pygame.KEYDOWN:
                     # Append the pressed key to the focused input field (or delete the last char on backspace).
                     # TODO: If a key stays pressed for a short time, repeatedly print the key.
                     d = {"username": isalnum,
                          "host": isallowed,
                          "port": isdigit}
-                    if self._view.focused in d:
-                        valid = d[self._view.focused]
+                    t = self._view.focused
+                    if t in d:
+                        valid = d[t]
                         if valid(pygame_event.unicode):
-                            self._ev_manager.post(events.AttachCharEvent(self._view.focused, pygame_event.unicode))
+                            self._ev_manager.post(events.AttachCharEvent(t, pygame_event.unicode))
                         elif pygame_event.key == pygame.K_BACKSPACE:
-                            self._ev_manager.post(events.RemoveCharEvent(self._view.focused, 1))
+                            self._ev_manager.post(events.RemoveCharEvent(t, 1))

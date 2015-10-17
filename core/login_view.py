@@ -3,7 +3,7 @@ import events
 import logging
 from pygame_view import PygameView
 from resource_manager import ResourceManager
-from widgets import TextInput
+from widgets import Widget, TextInput
 import copy
 
 
@@ -17,7 +17,6 @@ INPUT_FILL_COLOR = (0, 0, 0, 128)
 INPUT_WIDTH = 200
 INPUT_PADDING = (5, 5, 5, 5)
 INPUT_OFFSET = 40
-BLINK_TIME = 0.5
 
 
 class LoginView(PygameView):
@@ -31,9 +30,7 @@ class LoginView(PygameView):
         self._ev_manager.register_listener(self)
         self._resource_manager = ResourceManager.instance()
 
-        self._focused = None
-        self._blink = False
-        self._blink_time = 0
+        self._focused = None  # the focused widget
 
         # Get the background image.
         self._background = self._resource_manager.get_image(BACKGROUND_IMAGE, self.screen.get_size())
@@ -42,93 +39,84 @@ class LoginView(PygameView):
         self._font = self._resource_manager.get_font(FONT, FONT_SIZE)
         self._default_font = self._resource_manager.get_font(FONT_ITALIC, FONT_SIZE)
 
-        # Create the text inputs.
-        self._username_input = TextInput(self._font, INPUT_WIDTH, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
-                                        fill=INPUT_FILL_COLOR, default_text="username",
-                                        default_font=self._default_font)
-        self._host_input = copy.copy(self._username_input)
-        self._host_input.default_text = "host"
-        self._port_input = copy.copy(self._username_input)
-        self._port_input.default_text = "port"
+        # Create the container widget.
+        x = (self.screen.get_width() - INPUT_WIDTH - INPUT_PADDING[1] - INPUT_PADDING[3]) / 2
+        y = self.screen.get_height() / 2
+        w = INPUT_WIDTH + INPUT_PADDING[1] + INPUT_PADDING[3]
+        h = self.screen.get_height() - y
+        self._container_widget = Widget((x, y), (w, h), 0)
 
-    @property
-    def input_x(self):
-        return (self.screen.get_width() - INPUT_WIDTH - INPUT_PADDING[1] - INPUT_PADDING[3]) / 2
+        # Create the input widgets.
+        username_input = TextInput((0, 0), INPUT_WIDTH, 0, self._font, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
+                                   fill=INPUT_FILL_COLOR, default_text="username",
+                                   default_font=self._default_font)
+        host_input = copy.copy(username_input)
+        host_input.default_text = "host"
+        host_input.position = (0, INPUT_OFFSET)
+        port_input = copy.copy(username_input)
+        port_input.default_text = "port"
+        port_input.position = (0, 2*INPUT_OFFSET)
+        self._container_widget.add_widget(username_input)
+        self._container_widget.add_widget(host_input)
+        self._container_widget.add_widget(port_input)
 
-    @property
-    def input_y(self):
-        return self.screen.get_height() / 2
-
-    @property
-    def input_height(self):
-        return self._username_input.render_height
+    def focus(self, s):
+        """
+        Set the focus to the given widget.
+        :param s: the widget
+        """
+        assert s is None or isinstance(s, TextInput)
+        for w in self._container_widget.widgets:
+            w.focused = False
+        self._focused = s
+        if s is not None:
+            s.focused = True
 
     @property
     def focused(self):
         """
-        Return the name of the focused input field.
-        :return: name of the focused input field
+        Return the focused object.
+        :return: the focused object
         """
-        return self._focused
+        if self._focused is None:
+            return None
+        else:
+            return self._focused.default_text
 
-    @focused.setter
-    def focused(self, s):
+    def get_hovered(self, x, y):
         """
-        Set to focus to the given input. s must be either None, "username", "host", "port".
-        :param s: the input
+        Return the hovered widget.
+        :param x: x coordinate
+        :param y: y coordinate
+        :return: the hovered widget
         """
-        assert s in [None, "username", "host", "port"]
-        self._blink = True
-        self._blink_time = 0
-        self._focused = s
-
-    def object_at(self, x, y):
-        """
-        Return either None, "username", "host", "port", depending on which of those is the object at (x, y).
-        :return: which object is hovered
-        """
-        if self.input_x <= x <= self.input_x + INPUT_WIDTH + INPUT_PADDING[1] + INPUT_PADDING[3]:
-            if self.input_y <= y <= self.input_y + self.input_height:
-                return "username"
-            elif self.input_y + INPUT_OFFSET <= y <= self.input_y + INPUT_OFFSET + self.input_height:
-                return "host"
-            elif self.input_y + 2*INPUT_OFFSET <= y <= self.input_y + 2*INPUT_OFFSET + self.input_height:
-                return "port"
-        return None
+        hov = self._container_widget.get_hovered(x, y)
+        if hov is self._container_widget:
+            hov = None
+        return hov
 
     def notify(self, event):
         """
         Handle the given event.
         :param event: the event
         """
-        d = {"username": self._username_input,
-             "host": self._host_input,
-             "port": self._port_input}
-
         if isinstance(event, events.InitEvent):
             pass
         elif isinstance(event, events.TickEvent):
+            # Draw the background.
             self.screen.blit(self._background, (0, 0))
 
-            x = self.input_x
-            y = self.input_y
-
             # Update the blinking cursor.
-            self._blink_time += event.elapsed_time
-            blink_counts = int(self._blink_time / BLINK_TIME)
-            self._blink_time %= BLINK_TIME
-            if blink_counts % 2 == 1:
-                self._blink = not self._blink
+            for w in self._container_widget.widgets:
+                w.blink(event.elapsed_time)
 
-            # Render the input widgets.
-            self._username_input.render(self.screen, (x, y), focused=(self.focused == "username"), blink=self._blink)
-            self._host_input.render(self.screen, (x, y+INPUT_OFFSET), focused=(self.focused == "host"), blink=self._blink)
-            self._port_input.render(self.screen, (x, y+2*INPUT_OFFSET), focused=(self.focused == "port"), blink=self._blink)
+            # Render the widgets.
+            self._container_widget.render(self.screen)
 
+            # Flip the buffer.
             pygame.display.flip()
+
         elif isinstance(event, events.AttachCharEvent):
-            inp = d[event.entity_name]
-            inp.text += event.char
+            self._focused.text += event.char
         elif isinstance(event, events.RemoveCharEvent):
-            inp = d[event.entity_name]
-            inp.text = inp.text[:-event.n]
+            self._focused.text = self._focused.text[:-event.n]
