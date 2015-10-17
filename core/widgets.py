@@ -1,4 +1,5 @@
 import pygame
+import logging
 
 
 BLINK_TIME = 0.5
@@ -14,6 +15,9 @@ class Widget(object):
         self.size = size
         self.z_index = z_index
         self.widgets = []
+        self.hovered = False
+        self.focused = False
+        self.pressed = False
 
     def add_widget(self, w):
         """
@@ -32,7 +36,115 @@ class Widget(object):
         if w in self.widgets:
             self.widgets.remove(w)
 
-    def is_hovered(self, x, y):
+    def hover(self, x, y):
+        """
+        Set the hovered state.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        self.hovered = self.contains(x, y)
+        x -= self.position[0]
+        y -= self.position[1]
+        for w in self.widgets:
+            w.hover(x, y)
+        if self.hovered:
+            self.handle_hover(x, y)
+
+    def mouse_down(self, x, y):
+        """
+        Set the focused and the pressed state.
+        :param x: x coordinate
+        :param y: y coordinate
+        :return: True, if the widget contains (x, y)
+        """
+        x_sub = x-self.position[0]
+        y_sub = y-self.position[1]
+        sub_pressed = [w.mouse_down(x_sub, y_sub) for w in self.widgets]
+        sub_pressed = any(sub_pressed)
+
+        contains = self.contains(x, y)
+        if not contains or sub_pressed:
+            self.pressed = False
+            if self.focused:
+                self.focused = False
+                self.handle_lost_focus(x, y)
+        else:
+            self.focused = True
+            self.pressed = True
+            self.handle_got_focus(x, y)
+            self.handle_mouse_down(x, y)
+        return contains
+
+    def mouse_up(self, x, y):
+        """
+        Set the pressed state to false.
+        :param x: x coordinate
+        :param y: y coordinate
+        :return: True, if the widget contains (x, y)
+        """
+        x_sub = x-self.position[0]
+        y_sub = y-self.position[1]
+        sub_hovered = [w.mouse_up(x_sub, y_sub) for w in self.widgets]
+        sub_hovered = any(sub_hovered)
+
+        pressed = self.pressed
+        self.pressed = False
+        contains = self.contains(x, y)
+        if contains:
+            self.handle_mouse_up(x, y)
+            if pressed and not sub_hovered:
+                self.handle_clicked(x, y)
+        return contains
+
+    def handle_hover(self, x, y):
+        """
+        Callback for occurring hover events.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        pass
+
+    def handle_lost_focus(self, x, y):
+        """
+        Callback for occurring focus events.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        pass
+
+    def handle_got_focus(self, x, y):
+        """
+        Callback for occurring focus events.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        pass
+
+    def handle_mouse_down(self, x, y):
+        """
+        Callback for occurring mouse down events.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        pass
+
+    def handle_mouse_up(self, x, y):
+        """
+        Callback for occurring mouse up events.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        pass
+
+    def handle_clicked(self, x, y):
+        """
+        Callback for click events.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
+        pass
+
+    def contains(self, x, y):
         """
         Return whether (x, y) is inside the widget.
         :param x: x coordinate
@@ -43,28 +155,38 @@ class Widget(object):
         y_in = self.position[1] <= y <= self.position[1] + self.size[1]
         return x_in and y_in
 
-    def get_hovered(self, x, y):
+    def get_widget_at(self, x, y):
         """
-        Return the widget that is hovered by (x, y).
-        If self is not hovered, None is returned.
-        If self is hovered and does not contain other widgets, self is returned.
-        If self is hovered and contains other widgets, the hovered sub widget with the largest z_index is returned.
-        If none of the sub widgets is hovered, self is returned.
+        Return the widget at the given coordinate.
         :param x: x coordinate
         :param y: y coordinate
-        :return: the hovered widget
+        :return: the widget at (x, y)
         """
-        if not self.is_hovered(x, y):
+        if not self.contains(x, y):
             return None
         else:
             x -= self.position[0]
             y -= self.position[1]
-            hovered_widgets = [w for w in self.widgets if w.is_hovered(x, y)]
-            if len(hovered_widgets) == 0:
+            wlist = [w for w in self.widgets if w.contains(x, y)]
+            if len(wlist) == 0:
                 return self
             else:
-                hovered_widgets.sort(key=lambda ww: ww.z_index)
-                return hovered_widgets[-1].get_hovered(x, y)
+                wlist.sort(key=lambda ww:ww.z_index)
+                return wlist[-1].get_widget_at(x, y)
+
+    def get_focused_widget(self):
+        """
+        Return the focused widget (or None).
+        :return: the focused widget
+        """
+        if self.focused:
+            return self
+        else:
+            for w in self.widgets:
+                foc = w.get_focused_widget()
+                if foc is not None:
+                    return foc
+        return None
 
     def render(self, surface):
         """
@@ -75,6 +197,31 @@ class Widget(object):
         sub_surface = surface.subsurface(self.position, self.size)
         for w in self.widgets:
             w.render(sub_surface)
+
+    def update(self, elapsed_time):
+        """
+        Update the widget. This might be useful for animated widgets.
+        """
+        for w in self.widgets:
+            w.update(elapsed_time)
+
+
+class ImageWidget(Widget):
+    """
+    A widget that contains a single image.
+    """
+
+    def __init__(self, position, size, z_index, img):
+        super(ImageWidget, self).__init__(position, size, z_index)
+        self.image = img
+
+    def render(self, surface):
+        """
+        Render the image.
+        :param surface: the surface
+        """
+        surface.blit(self.image, self.position)
+        super(ImageWidget, self).render(surface)
 
 
 class TextInput(Widget):
@@ -95,32 +242,31 @@ class TextInput(Widget):
         else:
             self.default_font = default_font
         self._blink_time = 0
-        self._focused = False
 
         width += padding[1] + padding[3]
         height = font.get_linesize() + padding[0] + padding[2]
         super(TextInput, self).__init__(position, (width, height), z_index)
 
-    @property
-    def focused(self):
-        return self._focused
-
-    @focused.setter
-    def focused(self, f):
-        self._focused = f
-        self._blink_time = 0
-
-    def blink(self, elapsed_time):
+    def update(self, elapsed_time):
         """
         Update the blink time.
         :param elapsed_time: time since last frame
         """
         self._blink_time += elapsed_time
         self._blink_time %= 2*BLINK_TIME
+        super(TextInput, self).update(elapsed_time)
+
+    def handle_got_focus(self, x, y):
+        """
+        Reset the blink timer.
+        :param x:
+        :param y:
+        """
+        self._blink_time = 0
 
     def render(self, surface):
         """
-        Render the widget to the given surface at the given position.
+        Render the widget.
         :param surface: the surface
         """
         s = pygame.Surface(self.size, flags=pygame.SRCALPHA)
@@ -136,6 +282,7 @@ class TextInput(Widget):
 
         s.blit(font_obj, (self.padding[3], self.padding[0]))
         surface.blit(s, self.position)
+        super(TextInput, self).render(surface)
 
 
 class Button(Widget):
@@ -145,3 +292,19 @@ class Button(Widget):
 
     def __init__(self, position, size, z_index, default_img, hover_img, pressed_img):
         super(Button, self).__init__(position, size, z_index)
+        self.default_img = default_img
+        self.hover_img = hover_img
+        self.pressed_img = pressed_img
+
+    def render(self, surface):
+        """
+        Render the widget.
+        :param surface:
+        """
+        img = self.default_img
+        if self.pressed:
+            img = self.pressed_img
+        elif self.hovered:
+            img = self.hover_img
+        surface.blit(img, self.position)
+        super(Button, self).render(surface)

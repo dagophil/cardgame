@@ -3,7 +3,7 @@ import events
 import logging
 from pygame_view import PygameView
 from resource_manager import ResourceManager
-from widgets import Widget, TextInput
+from widgets import Widget, TextInput, Button, ImageWidget
 import copy
 
 
@@ -25,26 +25,32 @@ class LoginView(PygameView):
     """
 
     def __init__(self, ev_manager):
-        assert isinstance(ev_manager, events.EventManager)
-        self._ev_manager = ev_manager
-        self._ev_manager.register_listener(self)
-        self._resource_manager = ResourceManager.instance()
+        self._rm = ResourceManager.instance()
+        self._font = self._rm.get_font(FONT, FONT_SIZE)
+        self._default_font = self._rm.get_font(FONT_ITALIC, FONT_SIZE)
 
-        self._focused = None  # the focused widget
+        bg_widget = self.create_widgets()
+        super(LoginView, self).__init__(ev_manager, bg_widget)
 
-        # Get the background image.
-        self._background = self._resource_manager.get_image(BACKGROUND_IMAGE, self.screen.get_size())
+        # The focused text input.
+        self._focused_text_input = None
 
-        # Get the fonts.
-        self._font = self._resource_manager.get_font(FONT, FONT_SIZE)
-        self._default_font = self._resource_manager.get_font(FONT_ITALIC, FONT_SIZE)
+    def create_widgets(self):
+        """
+        Create the widgets and return the one that contains them all.
+        :return:
+        """
+        # Create the background widget.
+        bg = self._rm.get_image(BACKGROUND_IMAGE, self.screen.get_size())
+        bg_widget = ImageWidget((0, 0), self.screen.get_size(), 0, bg)
 
-        # Create the container widget.
+        # Create the container for the input widgets.
         x = (self.screen.get_width() - INPUT_WIDTH - INPUT_PADDING[1] - INPUT_PADDING[3]) / 2
         y = self.screen.get_height() / 2
         w = INPUT_WIDTH + INPUT_PADDING[1] + INPUT_PADDING[3]
         h = self.screen.get_height() - y
-        self._container_widget = Widget((x, y), (w, h), 0)
+        input_container = Widget((x, y), (w, h), 0)
+        bg_widget.add_widget(input_container)
 
         # Create the input widgets.
         username_input = TextInput((0, 0), INPUT_WIDTH, 0, self._font, padding=INPUT_PADDING, color=INPUT_FORE_COLOR,
@@ -56,67 +62,38 @@ class LoginView(PygameView):
         port_input = copy.copy(username_input)
         port_input.default_text = "port"
         port_input.position = (0, 2*INPUT_OFFSET)
-        self._container_widget.add_widget(username_input)
-        self._container_widget.add_widget(host_input)
-        self._container_widget.add_widget(port_input)
+        input_container.add_widget(username_input)
+        input_container.add_widget(host_input)
+        input_container.add_widget(port_input)
 
-    def focus(self, s):
-        """
-        Set the focus to the given widget.
-        :param s: the widget
-        """
-        assert s is None or isinstance(s, TextInput)
-        for w in self._container_widget.widgets:
-            w.focused = False
-        self._focused = s
-        if s is not None:
-            s.focused = True
+        # Create the button widget.
+        h = 100
+        btn_bg = pygame.Surface((w, h), flags=pygame.SRCALPHA)
+        btn_bg.fill((0, 0, 0, 255))
+        btn_font_obj = self._font.render("Login", True, (255, 255, 255, 255))
+        btn_bg.blit(btn_font_obj, (0, 0))
+        btn_hover = pygame.Surface((w, h), flags=pygame.SRCALPHA)
+        btn_hover.fill((255, 0, 0, 255))
+        btn_hover.blit(btn_font_obj, (0, 0))
+        btn_pressed = pygame.Surface((w, h), flags=pygame.SRCALPHA)
+        btn_pressed.fill((0, 255, 0, 255))
+        btn_pressed.blit(btn_font_obj, (0, 0))
+        btn = Button((0, 3*INPUT_OFFSET), (w, h), 0, btn_bg, btn_hover, btn_pressed)
+        input_container.add_widget(btn)
 
-    @property
-    def focused(self):
-        """
-        Return the focused object.
-        :return: the focused object
-        """
-        if self._focused is None:
-            return None
-        else:
-            return self._focused.default_text
-
-    def get_hovered(self, x, y):
-        """
-        Return the hovered widget.
-        :param x: x coordinate
-        :param y: y coordinate
-        :return: the hovered widget
-        """
-        hov = self._container_widget.get_hovered(x, y)
-        if hov is self._container_widget:
-            hov = None
-        return hov
+        return bg_widget
 
     def notify(self, event):
         """
-        Handle the given event.
+        Attach and remove chars from the text inputs.
         :param event: the event
         """
-        if isinstance(event, events.InitEvent):
-            pass
-        elif isinstance(event, events.TickEvent):
-            # Draw the background.
-            self.screen.blit(self._background, (0, 0))
-
-            # Update the blinking cursor.
-            for w in self._container_widget.widgets:
-                w.blink(event.elapsed_time)
-
-            # Render the widgets.
-            self._container_widget.render(self.screen)
-
-            # Flip the buffer.
-            pygame.display.flip()
-
-        elif isinstance(event, events.AttachCharEvent):
-            self._focused.text += event.char
+        super(LoginView, self).notify(event)
+        if isinstance(event, events.AttachCharEvent):
+            ent = event.entity
+            if isinstance(ent, TextInput):
+                ent.text += event.char
         elif isinstance(event, events.RemoveCharEvent):
-            self._focused.text = self._focused.text[:-event.n]
+            ent = event.entity
+            if isinstance(ent, TextInput):
+                ent.text = ent.text[:-event.n]

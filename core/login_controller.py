@@ -5,10 +5,7 @@ from pygame_controller import PygameController
 import pygame
 import common as cmn
 import logging
-
-
-CURSOR_POINTER = pygame.cursors.arrow
-CURSOR_HOVER = pygame.cursors.tri_left
+from widgets import TextInput, Button
 
 
 def isalnum(s):
@@ -45,28 +42,25 @@ class LoginController(PygameController):
         if isinstance(event, events.TickEvent):
             for pygame_event in self.events():
                 if pygame_event.type == pygame.MOUSEMOTION:
-                    # Change the cursor when an input field is hovered.
                     sx, sy = pygame_event.pos
-                    hov = self._view.get_hovered(sx, sy)
-                    if hov is None:
-                        pygame.mouse.set_cursor(*CURSOR_POINTER)
-                    else:
-                        pygame.mouse.set_cursor(*CURSOR_HOVER)
+                    self._view.hover(sx, sy)
                 elif pygame_event.type == pygame.MOUSEBUTTONDOWN:
-                    # Focus the current input field.
                     sx, sy = pygame_event.pos
-                    hov = self._view.get_hovered(sx, sy)
-                    self._view.focus(hov)
+                    self._view.mouse_down(sx, sy)
+                elif pygame_event.type == pygame.MOUSEBUTTONUP:
+                    sx, sy = pygame_event.pos
+                    self._view.mouse_up(sx, sy)
                 elif pygame_event.type == pygame.KEYDOWN:
                     # Append the pressed key to the focused input field (or delete the last char on backspace).
                     # TODO: If a key stays pressed for a short time, repeatedly print the key.
                     d = {"username": isalnum,
                          "host": isallowed,
                          "port": isdigit}
-                    t = self._view.focused
-                    if t in d:
+                    w = self._view.get_focused_widget()
+                    if isinstance(w, TextInput):
+                        t = w.default_text
                         valid = d[t]
                         if valid(pygame_event.unicode):
-                            self._ev_manager.post(events.AttachCharEvent(t, pygame_event.unicode))
+                            self._ev_manager.post(events.AttachCharEvent(w, t, pygame_event.unicode))
                         elif pygame_event.key == pygame.K_BACKSPACE:
-                            self._ev_manager.post(events.RemoveCharEvent(t, 1))
+                            self._ev_manager.post(events.RemoveCharEvent(w, t, 1))

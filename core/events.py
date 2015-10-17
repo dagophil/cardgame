@@ -27,13 +27,15 @@ class CloseCurrentModelEvent(Event):
 
 
 class AttachCharEvent(Event):
-    def __init__(self, entity_name, char):
+    def __init__(self, entity, entity_name, char):
+        self.entity = entity
         self.entity_name = entity_name
         self.char = char
 
 
 class RemoveCharEvent(Event):
-    def __init__(self, entity_name, n):
+    def __init__(self, entity, entity_name, n):
+        self.entity = entity
         self.entity_name = entity_name
         self.n = n
 
