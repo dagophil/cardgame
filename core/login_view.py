@@ -74,7 +74,6 @@ class LoginView(PygameView):
         def btn_clicked(x, y):
             self._ev_manager.post(events.LoginRequestedEvent())
         btn.handle_clicked = btn_clicked
-
         input_container.add_widget(btn)
 
         # Create the connection failed warning.
