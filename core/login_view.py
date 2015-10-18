@@ -28,12 +28,11 @@ class LoginView(PygameView):
         self._rm = ResourceManager.instance()
         self._font = self._rm.get_font(FONT, FONT_SIZE)
         self._default_font = self._rm.get_font(FONT_ITALIC, FONT_SIZE)
+        self._text_inputs = None
 
         bg_widget = self.create_widgets()
         super(LoginView, self).__init__(ev_manager, bg_widget)
 
-        # The focused text input.
-        self._focused_text_input = None
 
     def create_widgets(self):
         """
@@ -65,6 +64,7 @@ class LoginView(PygameView):
         input_container.add_widget(username_input)
         input_container.add_widget(host_input)
         input_container.add_widget(port_input)
+        self._text_inputs = {"username": username_input, "host": host_input, "port": port_input}
 
         # Create the button widget.
         h = 100
@@ -88,6 +88,22 @@ class LoginView(PygameView):
         btn.handle_clicked = btn_clicked
 
         return bg_widget
+
+    def focus_next(self):
+        """
+        Move the focus to the next input widget.
+        """
+        if self._text_inputs["username"].focused:
+            self._text_inputs["username"].focused = False
+            self._text_inputs["host"].focused = True
+        elif self._text_inputs["host"].focused:
+            self._text_inputs["host"].focused = False
+            self._text_inputs["port"].focused = True
+        elif self._text_inputs["port"].focused:
+            self._text_inputs["port"].focused = False
+            self._text_inputs["username"].focused = True
+        else:
+            self._text_inputs["username"].focused = True
 
     def notify(self, event):
         """

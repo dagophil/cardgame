@@ -43,19 +43,24 @@ class LoginController(PygameController):
         if isinstance(event, events.TickEvent):
             for pygame_event in self.events():
                 if pygame_event.type == pygame.KEYDOWN:
-                    # Append the pressed key to the focused input field (or delete the last char on backspace).
-                    # TODO: If a key stays pressed for a short time, repeatedly print the key.
-                    d = {"username": isalnum,
-                         "host": isallowed,
-                         "port": isdigit}
-                    w = self.view.get_focused_widget()
-                    if isinstance(w, TextInput):
-                        t = w.default_text
-                        valid = d[t]
-                        if valid(pygame_event.unicode):
-                            self._ev_manager.post(events.AttachCharEvent(w, t, pygame_event.unicode))
-                        elif pygame_event.key == pygame.K_BACKSPACE:
-                            self._ev_manager.post(events.RemoveCharEvent(w, t, 1))
+                    if pygame_event.key == pygame.K_RETURN:
+                        self._ev_manager.post(events.LoginRequestedEvent())
+                    elif pygame_event.key == pygame.K_TAB:
+                        self.view.focus_next()
+                    else:
+                        # Append the pressed key to the focused input field (or delete the last char on backspace).
+                        # TODO: If a key stays pressed for a short time, repeatedly print the key.
+                        d = {"username": isalnum,
+                             "host": isallowed,
+                             "port": isdigit}
+                        w = self.view.get_focused_widget()
+                        if isinstance(w, TextInput):
+                            t = w.default_text
+                            valid = d[t]
+                            if valid(pygame_event.unicode):
+                                self._ev_manager.post(events.AttachCharEvent(w, t, pygame_event.unicode))
+                            elif pygame_event.key == pygame.K_BACKSPACE:
+                                self._ev_manager.post(events.RemoveCharEvent(w, t, 1))
 
         elif isinstance(event, events.LoginRequestedEvent):
             logging.debug("Login requested: Username: '%s', host: '%s', port: '%s'" %

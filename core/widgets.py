@@ -16,8 +16,20 @@ class Widget(object):
         self.z_index = z_index
         self.widgets = []
         self.hovered = False
-        self.focused = False
+        self._focused = False
         self.pressed = False
+
+    @property
+    def focused(self):
+        return self._focused
+
+    @focused.setter
+    def focused(self, f):
+        if self._focused and not f:
+            self.handle_lost_focus()
+        elif not self._focused and f:
+            self.handle_got_focus()
+        self._focused = f
 
     def add_widget(self, w):
         """
@@ -65,13 +77,10 @@ class Widget(object):
         contains = self.contains(x, y)
         if not contains or sub_pressed:
             self.pressed = False
-            if self.focused:
-                self.focused = False
-                self.handle_lost_focus(x, y)
+            self.focused = False
         else:
             self.focused = True
             self.pressed = True
-            self.handle_got_focus(x, y)
             self.handle_mouse_down(x, y)
         return contains
 
@@ -104,19 +113,15 @@ class Widget(object):
         """
         pass
 
-    def handle_lost_focus(self, x, y):
+    def handle_lost_focus(self):
         """
         Callback for occurring focus events.
-        :param x: x coordinate
-        :param y: y coordinate
         """
         pass
 
-    def handle_got_focus(self, x, y):
+    def handle_got_focus(self):
         """
         Callback for occurring focus events.
-        :param x: x coordinate
-        :param y: y coordinate
         """
         pass
 
@@ -171,7 +176,7 @@ class Widget(object):
             if len(wlist) == 0:
                 return self
             else:
-                wlist.sort(key=lambda ww:ww.z_index)
+                wlist.sort(key=lambda ww: ww.z_index)
                 return wlist[-1].get_widget_at(x, y)
 
     def get_focused_widget(self):
@@ -256,11 +261,9 @@ class TextInput(Widget):
         self._blink_time %= 2*BLINK_TIME
         super(TextInput, self).update(elapsed_time)
 
-    def handle_got_focus(self, x, y):
+    def handle_got_focus(self):
         """
         Reset the blink timer.
-        :param x:
-        :param y:
         """
         self._blink_time = 0
 
