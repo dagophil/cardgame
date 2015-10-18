@@ -5,6 +5,7 @@ from pygame_view import PygameView
 from resource_manager import ResourceManager
 from widgets import Widget, TextInput, Button, ImageWidget
 import copy
+from actions import DelayedAction, FadeOutAction
 
 
 BACKGROUND_IMAGE = "resources/bg_green.png"
@@ -29,10 +30,11 @@ class LoginView(PygameView):
         self._font = self._rm.get_font(FONT, FONT_SIZE)
         self._default_font = self._rm.get_font(FONT_ITALIC, FONT_SIZE)
         self._text_inputs = None
+        self._connection_failed_warning = None
+        self._username_taken_warning = None
 
         bg_widget = self.create_widgets()
         super(LoginView, self).__init__(ev_manager, bg_widget)
-
 
     def create_widgets(self):
         """
@@ -41,7 +43,7 @@ class LoginView(PygameView):
         """
         # Create the background widget.
         bg = self._rm.get_image(BACKGROUND_IMAGE, self.screen.get_size())
-        bg_widget = ImageWidget((0, 0), self.screen.get_size(), 0, bg)
+        bg_widget = ImageWidget((0, 0), self.screen.get_size(), -1, bg)
 
         # Create the container for the input widgets.
         x = (self.screen.get_width() - INPUT_WIDTH - INPUT_PADDING[1] - INPUT_PADDING[3]) / 2
@@ -67,8 +69,33 @@ class LoginView(PygameView):
         self._text_inputs = {"username": username_input, "host": host_input, "port": port_input}
 
         # Create the button widget.
-        h = 100
-        btn_font_obj = self._font.render("Login", True, (255, 255, 255, 255))
+        btn = self._create_button((0, 3*INPUT_OFFSET), (w, 100), "Login")
+
+        def btn_clicked(x, y):
+            self._ev_manager.post(events.LoginRequestedEvent())
+        btn.handle_clicked = btn_clicked
+
+        input_container.add_widget(btn)
+
+        # Create the connection failed warning.
+        self._connection_failed_warning = self._create_warning((400, 100), "Connection failed")
+        bg_widget.add_widget(self._connection_failed_warning)
+        self._username_taken_warning = self._create_warning((400, 100), "Username already taken")
+        bg_widget.add_widget(self._username_taken_warning)
+
+        return bg_widget
+
+    def _create_button(self, position, size, text, z_index=0):
+        """
+        Create a button with centered text.
+        :param position: the position
+        :param size: the size
+        :param text: the text
+        :param z_index: the z index
+        :return: the button
+        """
+        w, h = size
+        btn_font_obj = self._font.render(text, True, (255, 255, 255, 255))
         offset_x = (w - btn_font_obj.get_width()) / 2
         offset_y = (h - btn_font_obj.get_height()) / 2
         btn_bg = pygame.Surface((w, h), flags=pygame.SRCALPHA)
@@ -80,14 +107,36 @@ class LoginView(PygameView):
         btn_pressed = pygame.Surface((w, h), flags=pygame.SRCALPHA)
         btn_pressed.fill((0, 0, 0, 200))
         btn_pressed.blit(btn_font_obj, (offset_x, offset_y))
-        btn = Button((0, 3*INPUT_OFFSET), (w, h), 0, btn_bg, btn_hover, btn_pressed)
-        input_container.add_widget(btn)
+        btn = Button(position, size, z_index, btn_bg, btn_hover, btn_pressed)
+        return btn
 
-        def btn_clicked(x, y):
-            self._ev_manager.post(events.LoginRequestedEvent())
-        btn.handle_clicked = btn_clicked
+    def _create_warning(self, size, text, z_index=10, fill=(0, 0, 0, 160)):
+        """
+        Create a warning widget that is centered on the screen.
+        :param size: the size
+        :param text: the text
+        :param fill: the fill color
+        :return: the widget
+        """
+        # Create the widget.
+        w, h = size
+        x = (self.screen.get_width() - w) / 2
+        y = (self.screen.get_height() - h) / 2
+        btn_font_obj = self._font.render(text, True, (255, 255, 255, 255))
+        offset_x = (w - btn_font_obj.get_width()) / 2
+        offset_y = (h - btn_font_obj.get_height()) / 2
+        warning_bg = pygame.Surface((w, h), flags=pygame.SRCALPHA)
+        warning_bg.fill(fill)
+        warning_bg.blit(btn_font_obj, (offset_x, offset_y))
+        warning = ImageWidget((x, y), (w, h), z_index, warning_bg, visible=False)
 
-        return bg_widget
+        # Attach the click function.
+        def warning_clicked(x, y):
+            warning.hide()
+            warning.clear_actions()
+        warning.handle_clicked = warning_clicked
+
+        return warning
 
     def focus_next(self):
         """
@@ -111,11 +160,27 @@ class LoginView(PygameView):
         :param event: the event
         """
         super(LoginView, self).notify(event)
+
         if isinstance(event, events.AttachCharEvent):
-            ent = event.entity
+            if event.entity is None:
+                ent = self._text_inputs.get(event.entity_name, None)
+            else:
+                ent = event.entity
             if isinstance(ent, TextInput):
                 ent.text += event.char
+
         elif isinstance(event, events.RemoveCharEvent):
-            ent = event.entity
+            if event.entity is None:
+                ent = self._text_inputs.get(event.entity_name, None)
+            else:
+                ent = event.entity
             if isinstance(ent, TextInput):
                 ent.text = ent.text[:-event.n]
+
+        elif isinstance(event, events.ConnectionFailedEvent):
+            self._connection_failed_warning.show()
+            self._connection_failed_warning.add_action(DelayedAction(3, FadeOutAction(0.5)))
+
+        elif isinstance(event, events.TakenUsernameEvent):
+            self._username_taken_warning.show()
+            self._username_taken_warning.add_action(DelayedAction(3, FadeOutAction(0.5)))

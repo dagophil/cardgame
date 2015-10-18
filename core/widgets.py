@@ -1,5 +1,6 @@
 import pygame
 import logging
+from actions import Action
 
 
 BLINK_TIME = 0.5
@@ -10,14 +11,17 @@ class Widget(object):
     Parent of all widget objects.
     """
 
-    def __init__(self, position, size, z_index):
+    def __init__(self, position, size, z_index, visible=True):
         self.position = position
         self.size = size
         self.z_index = z_index
-        self.widgets = []
+        self._widgets = []
         self.hovered = False
         self._focused = False
         self.pressed = False
+        self.visible = visible
+        self._actions = []
+        self._opacity = 1
 
     @property
     def focused(self):
@@ -31,22 +35,79 @@ class Widget(object):
             self.handle_got_focus()
         self._focused = f
 
+    def unfocus(self):
+        """
+        Remove focus from the current widget and all sub widgets.
+        """
+        self.focused = False
+        for w in self._widgets:
+            w.unfocus()
+
+    def unpress(self):
+        """
+        Remove the pressed state from the current widget and all sub widgets.
+        """
+        self.pressed = False
+        for w in self._widgets:
+            w.unpress()
+
+    @property
+    def opacity(self):
+        return self._opacity
+
+    @opacity.setter
+    def opacity(self, o):
+        if o <= 0:
+            self._opacity = 0
+            self.visible = False
+        elif o >= 1:
+            self._opacity = 1
+        else:
+            self._opacity = o
+
     def add_widget(self, w):
         """
         Add the widget to the container.
         :param w: the widget
         """
         assert isinstance(w, Widget)
-        if w not in self.widgets:
-            self.widgets.append(w)
+        if w not in self._widgets:
+            self._widgets.append(w)
 
     def remove_widget(self, w):
         """
         Remove the widget from the container.
         :param w: the widget
         """
-        if w in self.widgets:
-            self.widgets.remove(w)
+        if w in self._widgets:
+            self._widgets.remove(w)
+
+    def add_action(self, a):
+        """
+        Add the action to the widget.
+        :param a: the action
+        """
+        assert isinstance(a, Action)
+        self._actions.append(a)
+
+    def clear_actions(self):
+        """
+        Clear the action list.
+        """
+        self._actions = []
+
+    def show(self):
+        """
+        Show the widget.
+        """
+        self.visible = True
+        self.opacity = 1
+
+    def hide(self):
+        """
+        Hide the widget.
+        """
+        self.visible = False
 
     def hover(self, x, y):
         """
@@ -57,7 +118,7 @@ class Widget(object):
         self.hovered = self.contains(x, y)
         x -= self.position[0]
         y -= self.position[1]
-        for w in self.widgets:
+        for w in self._widgets:
             w.hover(x, y)
         if self.hovered:
             self.handle_hover(x, y)
@@ -71,8 +132,17 @@ class Widget(object):
         """
         x_sub = x-self.position[0]
         y_sub = y-self.position[1]
-        sub_pressed = [w.mouse_down(x_sub, y_sub) for w in self.widgets]
-        sub_pressed = any(sub_pressed)
+
+        sub_pressed = False
+        self._widgets.sort(key=lambda ww: ww.z_index)
+        for w in reversed(self._widgets):
+            if not w.visible:
+                continue
+            if sub_pressed:
+                w.unfocus()
+                w.unpress()
+            elif w.mouse_down(x_sub, y_sub):
+                sub_pressed = True
 
         contains = self.contains(x, y)
         if not contains or sub_pressed:
@@ -93,7 +163,7 @@ class Widget(object):
         """
         x_sub = x-self.position[0]
         y_sub = y-self.position[1]
-        sub_hovered = [w.mouse_up(x_sub, y_sub) for w in self.widgets]
+        sub_hovered = [w.mouse_up(x_sub, y_sub) for w in self._widgets]
         sub_hovered = any(sub_hovered)
 
         pressed = self.pressed
@@ -172,7 +242,7 @@ class Widget(object):
         else:
             x -= self.position[0]
             y -= self.position[1]
-            wlist = [w for w in self.widgets if w.contains(x, y)]
+            wlist = [w for w in self._widgets if w.contains(x, y)]
             if len(wlist) == 0:
                 return self
             else:
@@ -187,7 +257,7 @@ class Widget(object):
         if self.focused:
             return self
         else:
-            for w in self.widgets:
+            for w in self._widgets:
                 foc = w.get_focused_widget()
                 if foc is not None:
                     return foc
@@ -195,19 +265,42 @@ class Widget(object):
 
     def render(self, surface):
         """
+        If it is visible, render the widget.
+        :param surface: the surface
+        """
+        if self.visible and self.opacity > 0:  # only draw visible widgets
+            if self.opacity < 1:
+                # Draw the surface on a temporary surface.
+                s = pygame.Surface(surface.get_size(), flags=pygame.SRCALPHA)
+                self._render(s)
+                # Apply the opacity value.
+                alphas = pygame.surfarray.pixels_alpha(s)
+                alphas *= self.opacity
+                del alphas
+                # Copy the result.
+                surface.blit(s, (0, 0))
+            else:
+                self._render(surface)
+
+    def _render(self, surface):
+        """
         Render the sub widgets on the surface.
         Subclasses of Widget should call this at the end of their own render() method.
         :param surface: the surface
         """
         sub_surface = surface.subsurface(self.position, self.size)
-        for w in self.widgets:
+        self._widgets.sort(key=lambda ww: ww.z_index)
+        for w in self._widgets:
             w.render(sub_surface)
 
     def update(self, elapsed_time):
         """
-        Update the widget. This might be useful for animated widgets.
+        Update the widget.
         """
-        for w in self.widgets:
+        for a in self._actions[:]:
+            if a.act(self, elapsed_time):
+                self._actions.remove(a)
+        for w in self._widgets:
             w.update(elapsed_time)
 
 
@@ -216,17 +309,17 @@ class ImageWidget(Widget):
     A widget that contains a single image.
     """
 
-    def __init__(self, position, size, z_index, img):
-        super(ImageWidget, self).__init__(position, size, z_index)
+    def __init__(self, position, size, z_index, img, *args, **kwargs):
+        super(ImageWidget, self).__init__(position, size, z_index, *args, **kwargs)
         self.image = img
 
-    def render(self, surface):
+    def _render(self, surface):
         """
         Render the image.
         :param surface: the surface
         """
         surface.blit(self.image, self.position)
-        super(ImageWidget, self).render(surface)
+        super(ImageWidget, self)._render(surface)
 
 
 class TextInput(Widget):
@@ -235,7 +328,7 @@ class TextInput(Widget):
     """
 
     def __init__(self, position, width, z_index, font, padding=(0, 0, 0, 0), color=(255, 255, 255), fill=(0, 0, 0, 0),
-                 text="", default_text="", default_font=None):
+                 text="", default_text="", default_font=None, *args, **kwargs):
         self.font = font
         self.padding = padding
         self.color = color
@@ -250,7 +343,7 @@ class TextInput(Widget):
 
         width += padding[1] + padding[3]
         height = font.get_linesize() + padding[0] + padding[2]
-        super(TextInput, self).__init__(position, (width, height), z_index)
+        super(TextInput, self).__init__(position, (width, height), z_index, *args, **kwargs)
 
     def update(self, elapsed_time):
         """
@@ -267,7 +360,7 @@ class TextInput(Widget):
         """
         self._blink_time = 0
 
-    def render(self, surface):
+    def _render(self, surface):
         """
         Render the widget.
         :param surface: the surface
@@ -285,7 +378,7 @@ class TextInput(Widget):
 
         s.blit(font_obj, (self.padding[3], self.padding[0]))
         surface.blit(s, self.position)
-        super(TextInput, self).render(surface)
+        super(TextInput, self)._render(surface)
 
 
 class Button(Widget):
@@ -293,13 +386,13 @@ class Button(Widget):
     A button widget.
     """
 
-    def __init__(self, position, size, z_index, default_img, hover_img, pressed_img):
-        super(Button, self).__init__(position, size, z_index)
+    def __init__(self, position, size, z_index, default_img, hover_img, pressed_img, *args, **kwargs):
+        super(Button, self).__init__(position, size, z_index, *args, **kwargs)
         self.default_img = default_img
         self.hover_img = hover_img
         self.pressed_img = pressed_img
 
-    def render(self, surface):
+    def _render(self, surface):
         """
         Render the widget.
         :param surface:
@@ -310,4 +403,4 @@ class Button(Widget):
         elif self.hovered:
             img = self.hover_img
         surface.blit(img, self.position)
-        super(Button, self).render(surface)
+        super(Button, self)._render(surface)

@@ -89,7 +89,7 @@ class GameApp(object):
         # Create MVC.
         model = LoginModel(self._ev_manager)
         view = LoginView(self._ev_manager)
-        controller = LoginController(self._ev_manager, model, view)
+        controller = LoginController(self._ev_manager, model, view, self._args.login_file)
 
         # Initialize the components and start the ticker.
         self._ev_manager.post(InitEvent())
@@ -116,69 +116,8 @@ class GameApp(object):
         # Quit when all models finished.
         pygame.quit()
 
-    # def _handle_messages(self):
-    #     """
-    #     Handle the network messages.
-    #     """
-    #     # Get the new messages from the queue.
-    #     messages = []
-    #     while not self._msg_queue.empty():
-    #         msg = self._msg_queue.get()
-    #         messages.append(msg)
-    #
-    #     # Handle the messages.
-    #     for msg in messages:
-    #         if msg is None:
-    #             self.stop()
-    #             break
-    #         elif self._state == cmn.PENDING:
-    #             try:
-    #                 msg = int(msg)
-    #             except ValueError:
-    #                 logging.warning("Could not parse handshake number: %s" % msg)
-    #                 self.stop()
-    #             self.send(cmn.handshake_fun(msg))
-    #             self._state = cmn.WAIT_FOR_NAME
-    #         elif self._state == cmn.WAIT_FOR_NAME:
-    #             try:
-    #                 msg = int(msg)
-    #             except ValueError:
-    #                 logging.warning("Waiting for name, expected int, but got '%s'." % msg)
-    #                 self.stop()
-    #             self._wait_for_user = True
-    #             if msg == 1:
-    #                 self._ask_for_username()
-    #             elif msg == cmn.TAKEN_USERNAME:
-    #                 self._username_is_taken()
-    #         else:
-    #             logging.warning("Unhandled message: '%s'" % msg)
-    #
-    # def _ask_for_username(self):
-    #     """
-    #     Ask the user for the username.
-    #     """
-    #     logging.warning("ask_for_username(): Not implemented.")
-    #
-    # def _username_is_taken(self):
-    #     """
-    #
-    #     :return:
-    #     """
-    #     logging.warning("username_is_taken(): Not implemented.")
-    #
-    # def append_message(self, msg):
-    #     """
-    #     Append the given message to the message queue.
-    #     :param msg: the message
-    #     """
-    #     self._msg_queue.put(msg)
-
 
 parser = argparse.ArgumentParser(description="Wizard cardgame - Client")
-# parser.add_argument("--host", type=str, required=True,
-#                     help="the server hostname")
-# parser.add_argument("--port", type=int, required=True,
-#                     help="the port on the server")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="show verbose output")
 parser.add_argument("--debug", action="store_true",
@@ -191,6 +130,8 @@ parser.add_argument("--height", type=int, default=600,
                     help="window height")
 parser.add_argument("--model", type=str, default="Login", choices=["Login"],
                     help="the model that is loaded on startup")
+parser.add_argument("--login_file", type=str, default="recent_logins.txt",
+                    help="file that stores the recent login data")
 
 
 def main(args):
