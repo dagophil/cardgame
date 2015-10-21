@@ -1,10 +1,11 @@
 import sys
 import argparse
+import logging
 
 import pygame
 pygame.init()
 
-from core.events import *
+import core.events as events
 import core.common as cmn
 from core.login_view import LoginView
 from core.login_model import LoginModel
@@ -31,14 +32,14 @@ class TickerController(object):
         self._running = True
         elapsed_time = 0
         while self._running:
-            self._ev_manager.post(TickEvent(elapsed_time))
+            self._ev_manager.post(events.TickEvent(elapsed_time))
             elapsed_time = self._clock.tick(self._fps) / 1000.0  # elapsed time since last frame in seconds
 
     def notify(self, event):
         """
         Stop the ticker on the CloseModelEvent.
         """
-        if isinstance(event, CloseCurrentModelEvent):
+        if isinstance(event, events.CloseCurrentModelEvent):
             self._running = False
 
 
@@ -49,7 +50,7 @@ class GameApp(object):
 
     def __init__(self, args):
         self._args = args
-        self._ev_manager = EventManager()
+        self._ev_manager = events.EventManager()
         self._ev_manager.next_model_name = self._args.model
         self._ticker = TickerController(self._ev_manager, self.fps)
         self._models = {
@@ -92,7 +93,7 @@ class GameApp(object):
         controller = LoginController(self._ev_manager, model, view, self._args.login_file)
 
         # Initialize the components and start the ticker.
-        self._ev_manager.post(InitEvent())
+        self._ev_manager.post(events.InitEvent())
         self._ticker.run()
 
     def run(self):
@@ -108,7 +109,13 @@ class GameApp(object):
                 # Load and run the next model.
                 model = self._models[self._ev_manager.next_model_name]
                 self._ev_manager.next_model_name = None
-                model()
+                try:
+                    model()
+                except:
+                    # Tell the components that the app crashed, so additional cleanups can be done.
+                    logging.warning("The app crashed. Performing additional cleanups.")
+                    self._ev_manager.post(events.AppCrashedEvent())
+                    raise
             else:
                 logging.warning("Could not find model '%s'." % self._ev_manager.next_model_name)
                 raise Exception("Could not find model '%s'." % self._ev_manager.next_model_name)

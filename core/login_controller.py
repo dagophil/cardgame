@@ -5,7 +5,7 @@ from pygame_controller import PygameController
 import pygame
 import common as cmn
 import logging
-from widgets import TextInput, Button
+from widgets import TextInput
 from game_network_controller import GameNetworkController
 import os
 

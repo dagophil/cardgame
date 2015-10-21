@@ -73,6 +73,10 @@ class AcceptedUsernameEvent(Event):
     pass
 
 
+class AppCrashedEvent(Event):
+    pass
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.
@@ -120,3 +124,6 @@ class EventManager(object):
                     l.notify(ev)
         elif isinstance(event, CloseCurrentModelEvent):
             self.next_model_name = event.next_model_name
+        elif isinstance(event, AppCrashedEvent):
+            for l in list(self._listeners):
+                l.notify(event)

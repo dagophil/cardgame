@@ -1,6 +1,7 @@
 import pygame
 import logging
 from actions import Action
+import numpy
 
 
 BLINK_TIME = 0.5
@@ -12,7 +13,7 @@ class Widget(object):
     """
 
     def __init__(self, position, size, z_index, visible=True):
-        self.position = position
+        self.position = numpy.array(position, dtype=numpy.int32)
         self.size = size
         self.z_index = z_index
         self._widgets = []
@@ -266,32 +267,45 @@ class Widget(object):
     def render(self, surface):
         """
         If it is visible, render the widget.
+        Do not overwrite this method in subclasses, overwrite _render instead. The _render method will get a surface of
+        the widget's size, so the translation by self.position is not necessary.
         :param surface: the surface
         """
-        if self.visible and self.opacity > 0:  # only draw visible widgets
-            if self.opacity < 1:
+        r = pygame.Rect(self.position, self.size)
+        r_clipped = r.clip(surface.get_rect())
+
+        if self.visible and self.opacity > 0 and r_clipped.size > (0, 0):  # only draw visible widgets
+            if self.opacity < 1 or r != r_clipped:
                 # Draw the surface on a temporary surface.
-                s = pygame.Surface(surface.get_size(), flags=pygame.SRCALPHA)
+                s = pygame.Surface(self.size, flags=pygame.SRCALPHA)
                 self._render(s)
-                # Apply the opacity value.
-                alphas = pygame.surfarray.pixels_alpha(s)
-                alphas *= self.opacity
-                del alphas
+
+                # Apply the transparency.
+                if self.opacity < 1:
+                    alphas = pygame.surfarray.pixels_alpha(s)
+                    alphas *= self.opacity
+                    del alphas
+
+                # Get the visible area.
+                if r != r_clipped:
+                    s = s.subsurface(r_clipped.topleft - self.position, r_clipped.size)
+
                 # Copy the result.
-                surface.blit(s, (0, 0))
+                surface.blit(s, r_clipped.topleft)
             else:
-                self._render(surface)
+                s = surface.subsurface(self.position, self.size)
+                self._render(s)
 
     def _render(self, surface):
         """
-        Render the sub widgets on the surface.
-        Subclasses of Widget should call this at the end of their own render() method.
+        Overwrite this method in your subclass X of Widget to implement the drawing. At the end, you should call
+        super(X, self)._render(surface), so the sub widgets are rendered as well.
+        Keep in mind that surface already has the widget's size, so the translation by self.position is not necessary.
         :param surface: the surface
         """
-        sub_surface = surface.subsurface(self.position, self.size)
         self._widgets.sort(key=lambda ww: ww.z_index)
         for w in self._widgets:
-            w.render(sub_surface)
+            w.render(surface)
 
     def update(self, elapsed_time):
         """
@@ -318,7 +332,7 @@ class ImageWidget(Widget):
         Render the image.
         :param surface: the surface
         """
-        surface.blit(self.image, self.position)
+        surface.blit(self.image, (0, 0))
         super(ImageWidget, self)._render(surface)
 
 
@@ -377,7 +391,7 @@ class TextInput(Widget):
             font_obj = self.default_font.render(self.default_text+app, True, self.color)
 
         s.blit(font_obj, (self.padding[3], self.padding[0]))
-        surface.blit(s, self.position)
+        surface.blit(s, (0, 0))
         super(TextInput, self)._render(surface)
 
 
@@ -402,5 +416,5 @@ class Button(Widget):
             img = self.pressed_img
         elif self.hovered:
             img = self.hover_img
-        surface.blit(img, self.position)
+        surface.blit(img, (0, 0))
         super(Button, self)._render(surface)
