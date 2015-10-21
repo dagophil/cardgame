@@ -22,8 +22,9 @@ class ExitEvent(Event):
 
 
 class CloseCurrentModelEvent(Event):
-    def __init__(self, next_model_name):
+    def __init__(self, next_model_name, **kwargs):
         self.next_model_name = next_model_name
+        self.next_model_kwargs = kwargs
 
 
 class AttachCharEvent(Event):
@@ -88,6 +89,7 @@ class EventManager(object):
         self._next_id = 0
         self._sem = threading.Semaphore()
         self.next_model_name = None
+        self.next_model_kwargs = {}
 
     def register_listener(self, listener):
         """
@@ -124,6 +126,7 @@ class EventManager(object):
                     l.notify(ev)
         elif isinstance(event, CloseCurrentModelEvent):
             self.next_model_name = event.next_model_name
+            self.next_model_kwargs = event.next_model_kwargs
         elif isinstance(event, AppCrashedEvent):
             for l in list(self._listeners):
                 l.notify(event)

@@ -110,7 +110,7 @@ class GameApp(object):
                 model = self._models[self._ev_manager.next_model_name]
                 self._ev_manager.next_model_name = None
                 try:
-                    model()
+                    model(**self._ev_manager.next_model_kwargs)
                 except:
                     # Tell the components that the app crashed, so additional cleanups can be done.
                     logging.warning("The app crashed. Performing additional cleanups.")

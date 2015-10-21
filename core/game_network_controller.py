@@ -13,10 +13,23 @@ class GameNetworkController(NetworkController):
     A network controller that performs the handshake and translates the messages to events.
     """
 
-    def __init__(self, ev_manager):
+    def __init__(self, ev_manager, buffer_messages=False):
         super(GameNetworkController, self).__init__(ev_manager)
         self.username = None
         self._state = cmn.WAIT_FOR_HANDSHAKE
+        self._buffer_messages = buffer_messages  # if True, store the messages and handle them later
+        self._buffer = []
+
+    @property
+    def buffer_messages(self):
+        return self._buffer_messages
+
+    @buffer_messages.setter
+    def buffer_messages(self, b):
+        self._buffer_messages = b
+        if not b:
+            for msg in self._buffer:
+                self._handle_valid_message(*msg)
 
     def update_username(self, username):
         """
@@ -111,3 +124,37 @@ class GameNetworkController(NetworkController):
                         return
                     self._state = cmn.ACCEPTED
                     self._ev_manager.post(events.AcceptedUsernameEvent())
+
+            elif self._state == cmn.ACCEPTED:
+                self._handle_message(line)
+
+            else:
+                logging.warning("Unknown state: %d" % self._state)
+
+    def _handle_message(self, line):
+        """
+        Split the given line into message id and message and give them to _handle_valid_message.
+        :param line: the line
+        """
+        if "#" not in line:
+            logging.warning("Got invalid message '%s' from server." % line)
+        else:
+            i = line.index("#")
+            msg_id, msg = line[:i], line[i+1:]
+            try:
+                msg_id = int(msg_id)
+            except ValueError:
+                logging.warning("Server used non-integer message id in message '%s'" % line)
+                return
+            if self._buffer_messages:
+                self._buffer.append((msg_id, msg))
+            else:
+                self._handle_valid_message(msg_id, msg)
+
+    def _handle_valid_message(self, msg_id, msg):
+        """
+        Handle the message.
+        :param msg_id: the message id
+        :param msg: the message
+        """
+        logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))

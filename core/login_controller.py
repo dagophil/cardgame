@@ -40,7 +40,7 @@ class LoginController(PygameController):
         super(LoginController, self).__init__(ev_manager, view)
         assert isinstance(model, LoginModel)
         self._model = model
-        self._network_controller = GameNetworkController(self._ev_manager)
+        self._network_controller = GameNetworkController(self._ev_manager, buffer_messages=True)
         self._network_running = False
         self._login_filename = login_file
 
