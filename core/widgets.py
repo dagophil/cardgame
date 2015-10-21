@@ -323,9 +323,31 @@ class ImageWidget(Widget):
     A widget that contains a single image.
     """
 
-    def __init__(self, position, size, z_index, img, *args, **kwargs):
+    def __init__(self, position, size, z_index, img, style="stretch", *args, **kwargs):
         super(ImageWidget, self).__init__(position, size, z_index, *args, **kwargs)
-        self.image = img
+        self._image = img
+        self._scaled_image = img
+        self._style = style
+        if style == "stretch":
+            self._image_func = self._stretch_image
+        else:
+            raise Exception("Unknown style: %s" % style)
+
+    @property
+    def image(self):
+        return self._image_func()
+
+    def _stretch_image(self):
+        """
+        Stretch the image to the widget size and return it.
+        :return: the image
+        """
+        if self._scaled_image.get_size() != self.size:
+            if self._image.get_size() == self.size:
+                self._scaled_image = self._image
+            else:
+                self._scaled_image = pygame.transform.smoothscale(self._image, self.size)
+        return self._scaled_image
 
     def _render(self, surface):
         """

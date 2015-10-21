@@ -51,8 +51,7 @@ class LoginController(PygameController):
         """
         super(LoginController, self).notify(event)
 
-        if isinstance(event, events.InitEvent):
-            pass
+        if isinstance(event, events.InitModelEvent):
             # Load previous login data.
             if os.path.isfile(self._login_filename):
                 with open(self._login_filename) as f:

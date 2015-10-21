@@ -7,10 +7,13 @@ pygame.init()
 
 import core.events as events
 import core.common as cmn
+from core.pygame_view import PygameView
 from core.login_view import LoginView
 from core.login_model import LoginModel
 from core.login_controller import LoginController
-from core.pygame_view import PygameView
+from core.card_game_model import CardGameModel
+from core.card_game_view import CardGameView
+from core.card_game_controller import CardGameController
 
 
 class TickerController(object):
@@ -54,7 +57,8 @@ class GameApp(object):
         self._ev_manager.next_model_name = self._args.model
         self._ticker = TickerController(self._ev_manager, self.fps)
         self._models = {
-            "Login": self._run_login_model
+            "Login": self._run_login_model,
+            "CardGame": self._run_card_game_model
         }
 
     @property
@@ -93,7 +97,22 @@ class GameApp(object):
         controller = LoginController(self._ev_manager, model, view, self._args.login_file)
 
         # Initialize the components and start the ticker.
-        self._ev_manager.post(events.InitEvent())
+        self._ev_manager.post(events.InitModelEvent())
+        self._ticker.run()
+
+    def _run_card_game_model(self, network_controller):
+        """
+        Load and run the card game model.
+        """
+        logging.debug("Loading the card game model.")
+
+        # Create MVC.
+        model = CardGameModel(self._ev_manager)
+        view = CardGameView(self._ev_manager)
+        controller = CardGameController(self._ev_manager, model, view, network_controller)
+
+        # Initialize the components and start the ticker.
+        self._ev_manager.post(events.InitModelEvent())
         self._ticker.run()
 
     def run(self):
@@ -110,7 +129,7 @@ class GameApp(object):
                 model = self._models[self._ev_manager.next_model_name]
                 self._ev_manager.next_model_name = None
                 try:
-                    model(**self._ev_manager.next_model_kwargs)
+                    model(*self._ev_manager.next_model_args, **self._ev_manager.next_model_kwargs)
                 except:
                     # Tell the components that the app crashed, so additional cleanups can be done.
                     logging.warning("The app crashed. Performing additional cleanups.")

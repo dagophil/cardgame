@@ -8,7 +8,7 @@ class Event(object):
     pass
 
 
-class InitEvent(Event):
+class InitModelEvent(Event):
     pass
 
 
@@ -89,6 +89,7 @@ class EventManager(object):
         self._next_id = 0
         self._sem = threading.Semaphore()
         self.next_model_name = None
+        self.next_model_args = ()
         self.next_model_kwargs = {}
 
     def register_listener(self, listener):
@@ -118,7 +119,7 @@ class EventManager(object):
         :param event: the event
         """
         self._queue.append(event)
-        if isinstance(event, TickEvent) or isinstance(event, InitEvent):
+        if isinstance(event, TickEvent) or isinstance(event, InitModelEvent):
             while len(self._queue) > 0:
                 ev = self._queue.popleft()
                 # Iterate over a copy of the dict, so even from within the loop, listeners can delete themselves.

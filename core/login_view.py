@@ -177,9 +177,11 @@ class LoginView(PygameView):
                 ent.text = ent.text[:-event.n]
 
         elif isinstance(event, events.ConnectionFailedEvent):
+            self._connection_failed_warning.clear_actions()
             self._connection_failed_warning.show()
             self._connection_failed_warning.add_action(DelayedAction(3, FadeOutAction(0.5)))
 
         elif isinstance(event, events.TakenUsernameEvent):
+            self._username_taken_warning.clear_actions()
             self._username_taken_warning.show()
             self._username_taken_warning.add_action(DelayedAction(3, FadeOutAction(0.5)))
