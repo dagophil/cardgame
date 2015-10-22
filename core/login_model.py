@@ -31,6 +31,7 @@ class LoginModel(object):
                 self.port += c
             else:
                 logging.warning("LoginModel got unknown entity name: %s" % name)
+
         elif isinstance(event, events.RemoveCharEvent):
             name = event.entity_name
             n = event.n
@@ -42,3 +43,6 @@ class LoginModel(object):
                 self.port = self.port[:-n]
             else:
                 logging.warning("LoginModel got unknown entity name: %s" % name)
+
+        elif isinstance(event, events.CloseCurrentModelEvent):
+            self._ev_manager.unregister_listener(self)

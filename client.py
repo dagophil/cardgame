@@ -137,6 +137,7 @@ class GameApp(object):
                     raise
             else:
                 logging.warning("Could not find model '%s'." % self._ev_manager.next_model_name)
+                self._ev_manager.post(events.AppCrashedEvent())
                 raise Exception("Could not find model '%s'." % self._ev_manager.next_model_name)
 
         # Quit when all models finished.

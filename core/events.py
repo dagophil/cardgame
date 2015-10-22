@@ -1,4 +1,3 @@
-import weakref
 import collections
 import logging
 import threading
@@ -22,8 +21,9 @@ class ExitEvent(Event):
 
 
 class CloseCurrentModelEvent(Event):
-    def __init__(self, next_model_name, **kwargs):
+    def __init__(self, next_model_name, *args, **kwargs):
         self.next_model_name = next_model_name
+        self.next_model_args = args
         self.next_model_kwargs = kwargs
 
 
@@ -84,7 +84,7 @@ class EventManager(object):
     """
 
     def __init__(self):
-        self._listeners = weakref.WeakKeyDictionary()
+        self._listeners = {}
         self._queue = collections.deque()
         self._next_id = 0
         self._sem = threading.Semaphore()
@@ -127,6 +127,7 @@ class EventManager(object):
                     l.notify(ev)
         elif isinstance(event, CloseCurrentModelEvent):
             self.next_model_name = event.next_model_name
+            self.next_model_args = event.next_model_args
             self.next_model_kwargs = event.next_model_kwargs
         elif isinstance(event, AppCrashedEvent):
             for l in list(self._listeners):

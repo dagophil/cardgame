@@ -124,4 +124,9 @@ class LoginController(PygameController):
             self._network_running = False
 
         elif isinstance(event, events.AcceptedUsernameEvent):
-            logging.warning("TODO: Continue after the username was accepted.")
+            ev = events.CloseCurrentModelEvent("CardGame", network_controller=self._network_controller)
+            self._ev_manager.post(ev)
+            # TODO: Maybe do a smooth blending instead of the hard cut.
+
+        elif isinstance(event, events.CloseCurrentModelEvent):
+            self._ev_manager.unregister_listener(self)

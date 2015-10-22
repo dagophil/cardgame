@@ -75,8 +75,11 @@ class NetworkController(object):
         Handle the given event.
         :param event: the event
         """
-        if isinstance(event, events.CloseCurrentModelEvent) or isinstance(event, events.AppCrashedEvent):
+        if isinstance(event, events.AppCrashedEvent):
             self._shutdown()
+        elif isinstance(event, events.CloseCurrentModelEvent):
+            if event.next_model_name is None:
+                self._shutdown()
         elif isinstance(event, events.TickEvent):
             network_events = []
             while not self._network_events.empty():
