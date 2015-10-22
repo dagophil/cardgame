@@ -78,6 +78,26 @@ class AppCrashedEvent(Event):
     pass
 
 
+class PlayerJoinedEvent(Event):
+    def __init__(self, name):
+        self.name = name
+
+
+class StartGameEvent(Event):
+    def __init__(self, player_order):
+        self.player_order = player_order
+
+
+class NewCardsEvent(Event):
+    def __init__(self, cards):
+        self.cards = cards
+
+
+class NewTrumpEvent(Event):
+    def __init__(self, trump):
+        self.trump = trump
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.

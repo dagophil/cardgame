@@ -2,6 +2,7 @@ from network_controller import NetworkController
 import events
 import logging
 import common as cmn
+import json
 
 
 class InvalidMessageException(Exception):
@@ -157,4 +158,27 @@ class GameNetworkController(NetworkController):
         :param msg_id: the message id
         :param msg: the message
         """
-        logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))
+        if msg_id == 100:
+            self._ev_manager.post(events.PlayerJoinedEvent(msg))
+
+        elif msg_id == 200:
+            try:
+                l = json.loads(msg)
+            except ValueError:
+                logging.warning("Could not decrypt player order '%s'." % msg)
+                return
+            self._ev_manager.post(events.StartGameEvent(l))
+
+        elif msg_id == 201:
+            try:
+                l = json.loads(msg)
+            except ValueError:
+                logging.warning("Could not decrypt cards '%s'." % msg)
+                return
+            self._ev_manager.post(events.NewCardsEvent(l))
+
+        elif msg_id == 209:
+            self._ev_manager.post(events.NewTrumpEvent(msg))
+
+        else:
+            logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))

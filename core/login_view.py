@@ -78,11 +78,11 @@ class LoginView(PygameView):
         input_container.add_widget(btn)
 
         # Create the connection failed warning.
-        self._connection_failed_warning = special_widgets.warning_widget((400, 100), self.screen.get_size(),
-                                                                         "Connection failed", self._font)
+        self._connection_failed_warning = special_widgets.warning_widget(None, (400, 100), "Connection failed",
+                                                                         self._font, screen_size=self.screen.get_size())
         bg_widget.add_widget(self._connection_failed_warning)
-        self._username_taken_warning = special_widgets.warning_widget((400, 100), self.screen.get_size(),
-                                                                      "Username already taken", self._font)
+        self._username_taken_warning = special_widgets.warning_widget(None, (400, 100), "Username already taken",
+                                                                      self._font, screen_size=self.screen.get_size())
         bg_widget.add_widget(self._username_taken_warning)
 
         return bg_widget
