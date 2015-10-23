@@ -62,6 +62,8 @@ COLOR_NAMES = {"D": "Diamonds",
                "W": "Wizard",
                "L": "Loser"}
 
+NUMERIC_COLOR_VALUES = {"L": 0, "D": 1, "S": 2, "H": 3, "C": 4, "W": 5}
+
 NUMERIC_VALUES = {"2": 2,
                   "3": 3,
                   "4": 4,

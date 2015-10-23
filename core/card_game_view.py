@@ -6,6 +6,7 @@ import special_widgets
 import logging
 import actions
 import math
+import common as cmn
 
 
 BACKGROUND_IMAGE = "resources/bg_green.png"
@@ -13,6 +14,25 @@ FONT = "resources/fonts/opensans/OpenSans-Regular.ttf"
 FONT_ITALIC = "resources/fonts/opensans/OpenSans-Italic.ttf"
 FONT_BOLD = "resources/fonts/opensans/OpenSans-Bold.ttf"
 FONT_SIZE = 16
+
+
+def cmp_colors_first(a, b):
+    """
+    Compare two cards a, b for color sorting.
+    :param a: the first card
+    :param b: the second card
+    :return: the sorting
+    """
+    # Compare the colors.
+    ca = cmn.NUMERIC_COLOR_VALUES[a[0]]
+    cb = cmn.NUMERIC_COLOR_VALUES[b[0]]
+    if ca != cb:
+        return cmp(ca, cb)
+
+    # Compare the values.
+    va = cmn.NUMERIC_VALUES[a[1]]
+    vb = cmn.NUMERIC_VALUES[b[1]]
+    return cmp(va, vb)
 
 
 class CardGameView(PygameView):
@@ -84,6 +104,14 @@ class CardGameView(PygameView):
             w.visible = True
             self._background_widget.add_widget(w)
 
+    def _show_cards(self, cards):
+        """
+        Create the card widgets.
+        :param cards: the cards
+        """
+        cards.sort(cmp_colors_first)
+        logging.warning("TODO: Show the cards %s in the view." % str(cards))
+
     def notify(self, event):
         """
         Handle the event.
@@ -96,7 +124,7 @@ class CardGameView(PygameView):
             self._show_player_order(event.player_order)
 
         elif isinstance(event, events.NewCardsEvent):
-            logging.warning("TODO: Show the cards in the view.")
+            self._show_cards(event.cards)
 
         elif isinstance(event, events.NewTrumpEvent):
             logging.warning("TODO: Show the trump in the view.")
