@@ -5,6 +5,7 @@ from resource_manager import ResourceManager
 import special_widgets
 import logging
 import actions
+import math
 
 
 BACKGROUND_IMAGE = "resources/bg_green.png"
@@ -20,6 +21,8 @@ class CardGameView(PygameView):
         self._rm = ResourceManager.instance()
         self._font = self._rm.get_font(FONT, FONT_SIZE)
         self._warnings = {}
+        self.username = None
+        self._player_positions = {}
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -41,6 +44,46 @@ class CardGameView(PygameView):
 
         return bg_widget
 
+    def _show_player_order(self, player_order):
+        """
+        Show the player order.
+        :param player_order: the player order
+        """
+        width = 100
+        height = 50
+        margin_x = 10
+        margin_y = 10
+
+        cx = self._screen.get_width() / 2
+        cy = self._screen.get_height() / 2
+        rx = self._screen.get_width() / 2 - width/2 - margin_x
+        ry = self._screen.get_height() / 2 - height/2 - margin_y
+
+        # Rotate the players, so that the current user is at the bottom of the window and the player order is clockwise.
+        i = player_order.index(self.username)
+        player_order = player_order[i+1:] + player_order[:i]
+
+        # Compute the positions of the other players.
+        if len(player_order) == 1:
+            self._player_positions[player_order[0]] = (cx, height/2 + margin_y)
+        else:
+            n = len(player_order)-1
+            for i, p in enumerate(player_order):
+                d = i * math.pi / n
+                x = int(cx - math.cos(d) * rx)
+                y = int(cy - math.sin(d) * ry)
+                self._player_positions[p] = (x, y)
+
+        # Show the other players.
+        # TODO: The widget size should adapt to the length of the player name.
+        for p in player_order:
+            pos = self._player_positions[p]
+            x = pos[0] - width/2
+            y = pos[1] - height/2
+            w = special_widgets.warning_widget((x, y), (width, height), p, self._font, close_on_click=False)
+            w.visible = True
+            self._background_widget.add_widget(w)
+
     def notify(self, event):
         """
         Handle the event.
@@ -50,7 +93,7 @@ class CardGameView(PygameView):
 
         if isinstance(event, events.StartGameEvent):
             self._warnings["wait_box"].add_action(actions.FadeOutAction(0.5))
-            logging.warning("TODO: Show the player order in the view.")
+            self._show_player_order(event.player_order)
 
         elif isinstance(event, events.NewCardsEvent):
             logging.warning("TODO: Show the cards in the view.")

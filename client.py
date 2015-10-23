@@ -100,7 +100,7 @@ class GameApp(object):
         self._ev_manager.post(events.InitModelEvent())
         self._ticker.run()
 
-    def _run_card_game_model(self, network_controller):
+    def _run_card_game_model(self, network_controller, username):
         """
         Load and run the card game model.
         """
@@ -109,7 +109,7 @@ class GameApp(object):
         # Create MVC.
         model = CardGameModel(self._ev_manager)
         view = CardGameView(self._ev_manager)
-        controller = CardGameController(self._ev_manager, model, view, network_controller)
+        controller = CardGameController(self._ev_manager, model, view, network_controller, username)
 
         # Initialize the components and start the ticker.
         self._ev_manager.post(events.InitModelEvent())

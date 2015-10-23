@@ -10,12 +10,14 @@ class CardGameController(PygameController):
     The GUI controller.
     """
 
-    def __init__(self, ev_manager, model, view, network_controller):
+    def __init__(self, ev_manager, model, view, network_controller, username):
         super(CardGameController, self).__init__(ev_manager, view)
         assert isinstance(model, CardGameModel)
         assert isinstance(network_controller, GameNetworkController)
         self._model = model
         self._network_controller = network_controller
+        self._model.username = username
+        view.username = username
 
     def notify(self, event):
         """

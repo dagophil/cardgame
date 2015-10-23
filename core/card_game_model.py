@@ -10,6 +10,7 @@ class CardGameModel(object):
         self._player_order = None
         self._cards = None
         self._trump = None
+        self.username = None
 
     def notify(self, event):
         """
