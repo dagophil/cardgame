@@ -71,6 +71,9 @@ class GameNetworkController(NetworkController):
         elif isinstance(event, events.SayTricksEvent):
             self.send("%d#%d" % (cmn.SAY_TRICKS, event.n))
 
+        elif isinstance(event, events.SayCardEvent):
+            self.send("%d#%s" % (cmn.SAY_CARD, event.card))
+
         elif isinstance(event, events.LineReceivedEvent):
             line = event.line
             line = line.translate(cmn.CHAR_TRANS_TABLE)
@@ -201,6 +204,16 @@ class GameNetworkController(NetworkController):
             player, n = msg.split("#")
             n = int(n)
             self._ev_manager.post(events.PlayerSaidTricksEvent(player, n))
+
+        elif msg_id == cmn.ASK_CARD:
+            self._ev_manager.post(events.AskCardEvent())
+
+        elif msg_id == cmn.PLAYER_PLAYED_CARD:
+            player, card = msg.split("#")
+            self._ev_manager.post(events.PlayerPlayedCardEvent(player, card))
+
+        elif msg_id == cmn.WINS_TRICK:
+            self._ev_manager.post(events.WinTrickEvent(msg))
 
         else:
             logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))

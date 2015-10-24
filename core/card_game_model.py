@@ -14,6 +14,7 @@ class CardGameModel(object):
         self.username = None
         self._current_round = 0
         self._said_tricks = []
+        self._played_cards = []
 
     def notify(self, event):
         """
@@ -33,6 +34,7 @@ class CardGameModel(object):
 
         elif isinstance(event, events.AskTricksEvent):
             self._current_round = event.n
+            self._played_cards = []
 
         elif isinstance(event, events.PlayerSaidTricksEvent):
             self._said_tricks.append(event.n)
@@ -44,3 +46,25 @@ class CardGameModel(object):
                 self._ev_manager.post(events.InvalidNumTricksEvent(event.n))
             else:
                 self._ev_manager.post(events.SayTricksEvent(event.n))
+
+        elif isinstance(event, events.UserSaysCardEvent):
+            played_colors = [card[0] for card in self._played_cards if card[0] not in ["W", "L"]]
+            if len(played_colors) > 0:
+                # Some has played a suit.
+                follow_suit = played_colors[0][0]
+                if event.card[0] not in ["W", "L", follow_suit]:
+                    # The player did not follow suit. Check if this is ok.
+                    player_colors = [card[0] for card in self._cards]
+                    if follow_suit in player_colors:
+                        self._ev_manager.post(events.NotFollowedSuitEvent())
+                        return
+            self._ev_manager.post(events.SayCardEvent(event.card))
+
+        elif isinstance(event, events.WinTrickEvent):
+            self._played_cards = []
+
+        elif isinstance(event, events.SayCardEvent):
+            self._played_cards.append(event.card)
+
+        elif isinstance(event, events.PlayerPlayedCardEvent):
+            self._played_cards.append(event.card)

@@ -7,6 +7,10 @@ import numpy
 BLINK_TIME = 0.5
 
 
+def pass_func(*args, **kwargs):
+    pass
+
+
 class Widget(object):
     """
     Parent of all widget objects.
@@ -219,6 +223,12 @@ class Widget(object):
         :param y: y coordinate
         """
         pass
+
+    def unhandle_clicked(self):
+        """
+        Reset the handle_clicked to the default.
+        """
+        self.handle_clicked = pass_func
 
     def contains(self, x, y):
         """

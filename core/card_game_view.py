@@ -78,6 +78,8 @@ class CardGameView(PygameView):
         self._trump_widgets = {}
         self._choose_trump_widget = None
         self._ask_tricks_widget = None
+        self.user_move = False
+        self._played_card_widgets = []
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -196,10 +198,17 @@ class CardGameView(PygameView):
         x_delta = 50
         y = 400
         cards.sort(cmp_colors_first)
+        class HandleCardClicked(object):
+            def __init__(self, view, card):
+                self._view = view
+                self._card = card
+            def __call__(self, x, y):
+                self._view._handle_say_card(self._card)
         for i, card in enumerate(cards):
             card_image_name = get_card_image_filename(card)
             im = self._rm.get_image(card_image_name)
             w = ImageWidget((x_min+i*x_delta, y), card_size, i, im)
+            w.handle_clicked = HandleCardClicked(self, card)
             self._background_widget.add_widget(w)
             self._card_widgets[card] = w
 
@@ -292,6 +301,31 @@ class CardGameView(PygameView):
         w.show()
         w.add_action(actions.DelayedAction(3, actions.FadeOutAction(0.5)))
 
+    def _handle_say_card(self, card):
+        """
+        Broadcast the card that the user wants to play.
+        :param card: the card
+        """
+        if self.user_move:
+            self._ev_manager.post(events.UserSaysCardEvent(card))
+
+    def _player_played_card(self, player, card):
+        """
+        Show that the player played the card.
+        :param player: the player
+        :param card: the card
+        """
+        card_size = (130, 184)
+        im_filename = get_card_image_filename(card)
+        im = self._rm.get_image(im_filename)
+        pos = self._player_positions[player]
+        im_w = ImageWidget((pos[0]-card_size[0]/2, pos[1]-card_size[1]/2), card_size, len(self._played_card_widgets), im)
+        self._background_widget.add_widget(im_w)
+        x = self.screen.get_width()/2 - 200 + len(self._played_card_widgets) * 60
+        y = 150 + len(self._played_card_widgets) * 10
+        im_w.add_action(actions.MoveToAction((x, y), 1))
+        self._played_card_widgets.append(im_w)
+
     def notify(self, event):
         """
         Handle the event.
@@ -311,3 +345,27 @@ class CardGameView(PygameView):
         elif isinstance(event, events.PlayerSaidTricksEvent):
             # TODO: Show the number of tricks that the player said.
             pass
+
+        elif isinstance(event, events.AskCardEvent):
+            # TODO: Show a message that it is the user's move.
+            pass
+
+        elif isinstance(event, events.SayCardEvent):
+            x = self.screen.get_width()/2 - 200 + len(self._played_card_widgets) * 60
+            y = 150 + len(self._played_card_widgets) * 10
+            w = self._card_widgets[event.card]
+            w.unhandle_clicked()
+            w.z_index = 20 + len(self._played_card_widgets)
+            self._played_card_widgets.append(w)
+            w.add_action(actions.MoveToAction((x, y), 1))
+            self.user_move = False
+
+        elif isinstance(event, events.PlayerPlayedCardEvent):
+            if event.player != self.username:
+                self._player_played_card(event.player, event.card)
+
+        elif isinstance(event, events.WinTrickEvent):
+            for w in self._played_card_widgets:
+                self._background_widget.remove_widget(w)
+            self._played_card_widgets = []
+            logging.warning("TODO: Show that player %s won the trick." % event.player)

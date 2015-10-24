@@ -184,3 +184,30 @@ class MoveByAction(Action):
             w.position += delta - self._current_delta
             self._current_delta = delta
             return False
+
+class MoveToAction(Action):
+    """
+    Move the widget to the given position in the given time.
+    """
+
+    def __init__(self, target_pos, time):
+        super(MoveToAction, self).__init__()
+        self.target_pos = numpy.array(target_pos, dtype=numpy.int32)
+        self.time = time
+        self._elapsed_time = 0
+        self._init_pos = None
+
+    def _act(self, w, elapsed_time):
+        """
+        Do the movement.
+        """
+        if self._init_pos is None:
+            self._init_pos = w.position
+        self._elapsed_time += elapsed_time
+        t = self._elapsed_time / float(self.time)
+        if t >= 1:
+            w.position = self.target_pos
+            return True
+        else:
+            w.position = t * (self.target_pos - self._init_pos) + self._init_pos
+            return False

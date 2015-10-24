@@ -51,3 +51,6 @@ class CardGameController(PygameController):
 
         elif isinstance(event, events.InvalidNumTricksEvent):
             self._view.show_invalid_num_tricks(event.n)
+
+        elif isinstance(event, events.AskCardEvent):
+            self._view.user_move = True

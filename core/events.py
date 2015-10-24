@@ -137,6 +137,35 @@ class InvalidNumTricksEvent(Event):
         self.n = n
 
 
+class AskCardEvent(Event):
+    pass
+
+
+class UserSaysCardEvent(Event):
+    def __init__(self, card):
+        self.card = card
+
+
+class WinTrickEvent(Event):
+    def __init__(self, player):
+        self.player = player
+
+
+class NotFollowedSuitEvent(Event):
+    pass
+
+
+class SayCardEvent(Event):
+    def __init__(self, card):
+        self.card = card
+
+
+class PlayerPlayedCardEvent(Event):
+    def __init__(self, player, card):
+        self.player = player
+        self.card = card
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.
