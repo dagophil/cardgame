@@ -77,6 +77,7 @@ class CardGameView(PygameView):
         self._card_widgets = {}
         self._trump_widgets = {}
         self._choose_trump_widget = None
+        self._ask_tricks_widget = None
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -92,9 +93,15 @@ class CardGameView(PygameView):
         # Create the waiting text.
         wait_box = special_widgets.warning_widget(None, (400, 100), "Waiting for other players", self._font,
                                                   screen_size=self.screen.get_size(), close_on_click=False)
-        # wait_box.visible = True
+        wait_box.visible = True
         bg_widget.add_widget(wait_box)
         self._warnings["wait_box"] = wait_box
+
+        # Create the "invalid num tricks" warning.
+        invalid_num_warning = special_widgets.warning_widget(None, (400, 100), "Invalid number of tricks", self._font,
+                                                             screen_size=self.screen.get_size())
+        bg_widget.add_widget(invalid_num_warning)
+        self._warnings["invalid_num_tricks"] = invalid_num_warning
 
         # Create the chat widget.
         chat_box = special_widgets.warning_widget((10, self.screen.get_height()-260), (260, 200), "chat", self._font,
@@ -103,7 +110,7 @@ class CardGameView(PygameView):
         bg_widget.add_widget(chat_box)
 
         # Create the trump widgets.
-        trump_pos = (200, 180)
+        trump_pos = (180, 180)
         trump_size = (125, 125)
         for color in ["W", "H", "D", "S", "C"]:
             im_filename = get_color_image_filename(color)
@@ -114,15 +121,12 @@ class CardGameView(PygameView):
             self._trump_widgets[color] = im_w
 
         # Create the "choose trump" widgets.
-        def choose_D_handler(x, y):
-            self._handle_choose_trump("D")
-        def choose_S_handler(x, y):
-            self._handle_choose_trump("S")
-        def choose_H_handler(x, y):
-            self._handle_choose_trump("H")
-        def choose_C_handler(x, y):
-            self._handle_choose_trump("C")
-        choose_handler = {"D": choose_D_handler, "S": choose_S_handler, "H": choose_H_handler, "C": choose_C_handler}
+        class ChooseHandler(object):
+            def __init__(self, view, trump):
+                self._view = view
+                self._trump = trump
+            def __call__(self, x, y):
+                self._view._handle_choose_trump(self._trump)
         choose_size = (90, 90)
         choose_trump_bg = pygame.Surface((400, 170), flags=pygame.SRCALPHA)
         choose_trump_bg.fill((0, 0, 0, 160))
@@ -135,7 +139,7 @@ class CardGameView(PygameView):
             im = self._rm.get_image(im_filename, choose_size)
             im_w = ImageWidget((i*(choose_size[0]+10), 70), choose_size, 0, im)
             choose_trump_container.add_widget(im_w)
-            im_w.handle_clicked = choose_handler[color]
+            im_w.handle_clicked = ChooseHandler(self, color)
         bg_widget.add_widget(choose_trump_container)
         self._choose_trump_widget = choose_trump_container
 
@@ -239,6 +243,55 @@ class CardGameView(PygameView):
         self._choose_trump_widget.opacity = 0
         self._ev_manager.post(events.ChooseTrumpEvent(trump))
 
+    def ask_tricks(self, n):
+        """
+        Ask the user for the number of tricks.
+        :param n: the maximum number of tricks
+        """
+        # Create the container with the fade in effect.
+        container = Widget((self.screen.get_width()/2-200, 100), (400, self.screen.get_height()-120), 10)
+        container.opacity = 0
+        container.add_action(actions.FadeInAction(0.5))
+        self._ask_tricks_widget = container
+        self._background_widget.add_widget(container)
+
+        # Create the question text.
+        text_w = special_widgets.warning_widget((0, 0), (400, 60), "How many tricks do you make?", self._font,
+                                                close_on_click=False)
+        text_w.visible = True
+        container.add_widget(text_w)
+
+        # Create the numbers.
+        class ChooseHandler(object):
+            def __init__(self, view, nn):
+                self._view = view
+                self._n = nn
+            def __call__(self, x, y):
+                self._view._handle_say_tricks(self._n)
+        for i in xrange(n+1):
+            size = (50, 50)
+            pos = ((i % 5) * (size[0]+20), 80 + (i/5) * (size[1] + 20))
+            w = special_widgets.warning_widget(pos, size, str(i), self._font, close_on_click=False)
+            w.visible = True
+            w.handle_clicked = ChooseHandler(self, i)
+            container.add_widget(w)
+
+    def _handle_say_tricks(self, n):
+        """
+        Broadcast the user input.
+        :param n: the number
+        """
+        self._ev_manager.post(events.UserSaysTricksEvent(n))
+
+    def show_invalid_num_tricks(self, n):
+        """
+        Show the warning, that an invalid number of tricks was chosen.
+        :param n: the number
+        """
+        w = self._warnings["invalid_num_tricks"]
+        w.show()
+        w.add_action(actions.DelayedAction(3, actions.FadeOutAction(0.5)))
+
     def notify(self, event):
         """
         Handle the event.
@@ -249,3 +302,12 @@ class CardGameView(PygameView):
         if isinstance(event, events.StartGameEvent):
             self._warnings["wait_box"].add_action(actions.FadeOutAction(0.5))
             self._show_player_order(event.player_order)
+
+        elif isinstance(event, events.SayTricksEvent):
+            self._background_widget.remove_widget(self._ask_tricks_widget)
+            self._warnings["invalid_num_tricks"].hide()
+            self._ask_tricks_widget = None
+
+        elif isinstance(event, events.PlayerSaidTricksEvent):
+            # TODO: Show the number of tricks that the player said.
+            pass

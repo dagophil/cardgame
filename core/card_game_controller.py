@@ -45,3 +45,9 @@ class CardGameController(PygameController):
 
         elif isinstance(event, events.AskTrumpEvent):
             self._view.ask_trump()
+
+        elif isinstance(event, events.AskTricksEvent):
+            self._view.ask_tricks(event.n)
+
+        elif isinstance(event, events.InvalidNumTricksEvent):
+            self._view.show_invalid_num_tricks(event.n)

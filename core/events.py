@@ -111,6 +111,32 @@ class NewTrumpEvent(Event):
         self.trump = trump
 
 
+class AskTricksEvent(Event):
+    def __init__(self, n):
+        self.n = n
+
+
+class UserSaysTricksEvent(Event):
+    def __init__(self, n):
+        self.n = n
+
+
+class SayTricksEvent(Event):
+    def __init__(self, n):
+        self.n = n
+
+
+class PlayerSaidTricksEvent(Event):
+    def __init__(self, player, n):
+        self.player = player
+        self.n = n
+
+
+class InvalidNumTricksEvent(Event):
+    def __init__(self, n):
+        self.n = n
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.

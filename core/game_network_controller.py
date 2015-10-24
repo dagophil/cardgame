@@ -68,6 +68,9 @@ class GameNetworkController(NetworkController):
         if isinstance(event, events.ChooseTrumpEvent):
             self.send("%d#%s" % (cmn.SAY_TRUMP, event.trump))
 
+        elif isinstance(event, events.SayTricksEvent):
+            self.send("%d#%d" % (cmn.SAY_TRICKS, event.n))
+
         elif isinstance(event, events.LineReceivedEvent):
             line = event.line
             line = line.translate(cmn.CHAR_TRANS_TABLE)
@@ -190,6 +193,14 @@ class GameNetworkController(NetworkController):
 
         elif msg_id == cmn.FOUND_TRUMP:
             self._ev_manager.post(events.NewTrumpEvent(msg))
+
+        elif msg_id == cmn.ASK_TRICKS:
+            self._ev_manager.post(events.AskTricksEvent(int(msg)))
+
+        elif msg_id == cmn.PLAYER_SAID_TRICKS:
+            player, n = msg.split("#")
+            n = int(n)
+            self._ev_manager.post(events.PlayerSaidTricksEvent(player, n))
 
         else:
             logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))
