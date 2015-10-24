@@ -83,6 +83,11 @@ class PlayerJoinedEvent(Event):
         self.name = name
 
 
+class PlayerLeftEvent(Event):
+    def __init__(self, name):
+        self.name = name
+
+
 class StartGameEvent(Event):
     def __init__(self, player_order):
         self.player_order = player_order
@@ -91,6 +96,14 @@ class StartGameEvent(Event):
 class NewCardsEvent(Event):
     def __init__(self, cards):
         self.cards = cards
+
+
+class AskTrumpEvent(Event):
+    pass
+
+class ChooseTrumpEvent(Event):
+    def __init__(self, trump):
+        self.trump = trump
 
 
 class NewTrumpEvent(Event):

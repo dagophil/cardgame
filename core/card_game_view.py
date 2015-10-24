@@ -1,12 +1,13 @@
 import events
 from pygame_view import PygameView
-from widgets import ImageWidget
+from widgets import Widget, ImageWidget
 from resource_manager import ResourceManager
 import special_widgets
 import logging
 import actions
 import math
 import common as cmn
+import pygame
 
 
 BACKGROUND_IMAGE = "resources/bg_green.png"
@@ -16,7 +17,7 @@ FONT_BOLD = "resources/fonts/opensans/OpenSans-Bold.ttf"
 FONT_SIZE = 16
 
 
-def get_card_image(card):
+def get_card_image_filename(card):
     """
     Return the filename of the image of the given card.
     :param card: the card
@@ -32,7 +33,7 @@ def get_card_image(card):
     return s
 
 
-def get_color_image(color):
+def get_color_image_filename(color):
     """
     Return the filename of the image of the given color.
     :param color: the color
@@ -75,6 +76,7 @@ class CardGameView(PygameView):
         self._player_positions = {}
         self._card_widgets = {}
         self._trump_widgets = {}
+        self._choose_trump_widget = None
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -90,7 +92,7 @@ class CardGameView(PygameView):
         # Create the waiting text.
         wait_box = special_widgets.warning_widget(None, (400, 100), "Waiting for other players", self._font,
                                                   screen_size=self.screen.get_size(), close_on_click=False)
-        wait_box.visible = True
+        # wait_box.visible = True
         bg_widget.add_widget(wait_box)
         self._warnings["wait_box"] = wait_box
 
@@ -104,12 +106,38 @@ class CardGameView(PygameView):
         trump_pos = (200, 180)
         trump_size = (125, 125)
         for color in ["W", "H", "D", "S", "C"]:
-            im_filename = get_color_image(color)
+            im_filename = get_color_image_filename(color)
             im = self._rm.get_image(im_filename, trump_size)
             im_w = ImageWidget(trump_pos, trump_size, 0, im)
             im_w.opacity = 0
             bg_widget.add_widget(im_w)
             self._trump_widgets[color] = im_w
+
+        # Create the "choose trump" widgets.
+        def choose_D_handler(x, y):
+            self._handle_choose_trump("D")
+        def choose_S_handler(x, y):
+            self._handle_choose_trump("S")
+        def choose_H_handler(x, y):
+            self._handle_choose_trump("H")
+        def choose_C_handler(x, y):
+            self._handle_choose_trump("C")
+        choose_handler = {"D": choose_D_handler, "S": choose_S_handler, "H": choose_H_handler, "C": choose_C_handler}
+        choose_size = (90, 90)
+        choose_trump_bg = pygame.Surface((400, 170), flags=pygame.SRCALPHA)
+        choose_trump_bg.fill((0, 0, 0, 160))
+        font_obj = self._font.render("Choose the trump:", True, (255, 255, 255, 255))
+        choose_trump_bg.blit(font_obj, ((choose_trump_bg.get_width()-font_obj.get_width())/2, 20))
+        choose_trump_container = ImageWidget((self.screen.get_width()/2 - 200, 200), choose_trump_bg.get_size(), 99,
+                                             choose_trump_bg, visible=False)
+        for i, color in enumerate(["D", "S", "H", "C"]):
+            im_filename = get_color_image_filename(color)
+            im = self._rm.get_image(im_filename, choose_size)
+            im_w = ImageWidget((i*(choose_size[0]+10), 70), choose_size, 0, im)
+            choose_trump_container.add_widget(im_w)
+            im_w.handle_clicked = choose_handler[color]
+        bg_widget.add_widget(choose_trump_container)
+        self._choose_trump_widget = choose_trump_container
 
         return bg_widget
 
@@ -153,7 +181,7 @@ class CardGameView(PygameView):
             w.visible = True
             self._background_widget.add_widget(w)
 
-    def _show_cards(self, cards):
+    def show_cards(self, cards):
         """
         Create the card widgets.
         :param cards: the cards
@@ -165,13 +193,13 @@ class CardGameView(PygameView):
         y = 400
         cards.sort(cmp_colors_first)
         for i, card in enumerate(cards):
-            card_image_name = get_card_image(card)
+            card_image_name = get_card_image_filename(card)
             im = self._rm.get_image(card_image_name)
             w = ImageWidget((x_min+i*x_delta, y), card_size, i, im)
             self._background_widget.add_widget(w)
             self._card_widgets[card] = w
 
-    def _show_trump(self, trump):
+    def show_trump(self, trump):
         """
         Show the trump widget.
         :param trump: the trump
@@ -193,6 +221,24 @@ class CardGameView(PygameView):
             a.handle_finished = fade_in_new_trump
             visible_w.add_action(a)
 
+    def ask_trump(self):
+        """
+        Ask the user for the trump.
+        """
+        for w in self._trump_widgets.values():
+            w.clear_actions()
+            w.opacity = 0
+        self._choose_trump_widget.opacity = 0
+        self._choose_trump_widget.add_action(actions.FadeInAction(0.5))
+
+    def _handle_choose_trump(self, trump):
+        """
+        Send the chosen trump to the server.
+        :param trump: the trump
+        """
+        self._choose_trump_widget.opacity = 0
+        self._ev_manager.post(events.ChooseTrumpEvent(trump))
+
     def notify(self, event):
         """
         Handle the event.
@@ -203,9 +249,3 @@ class CardGameView(PygameView):
         if isinstance(event, events.StartGameEvent):
             self._warnings["wait_box"].add_action(actions.FadeOutAction(0.5))
             self._show_player_order(event.player_order)
-
-        elif isinstance(event, events.NewCardsEvent):
-            self._show_cards(event.cards)
-
-        elif isinstance(event, events.NewTrumpEvent):
-            self._show_trump(event.trump)

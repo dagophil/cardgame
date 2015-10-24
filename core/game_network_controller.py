@@ -3,6 +3,7 @@ import events
 import logging
 import common as cmn
 import json
+import numbers
 
 
 class InvalidMessageException(Exception):
@@ -63,7 +64,11 @@ class GameNetworkController(NetworkController):
         :param event: the event
         """
         super(GameNetworkController, self).notify(event)
-        if isinstance(event, events.LineReceivedEvent):
+
+        if isinstance(event, events.ChooseTrumpEvent):
+            self.send("%d#%s" % (cmn.SAY_TRUMP, event.trump))
+
+        elif isinstance(event, events.LineReceivedEvent):
             line = event.line
             line = line.translate(cmn.CHAR_TRANS_TABLE)
             logging.debug("Received '%s' over network." % line)
@@ -158,10 +163,13 @@ class GameNetworkController(NetworkController):
         :param msg_id: the message id
         :param msg: the message
         """
-        if msg_id == 100:
+        if msg_id == cmn.NEW_USER:
             self._ev_manager.post(events.PlayerJoinedEvent(msg))
 
-        elif msg_id == 200:
+        elif msg_id == cmn.USER_LEFT:
+            self._ev_manager.post(events.PlayerLeftEvent(msg))
+
+        elif msg_id == cmn.START_GAME:
             try:
                 l = json.loads(msg)
             except ValueError:
@@ -169,7 +177,7 @@ class GameNetworkController(NetworkController):
                 return
             self._ev_manager.post(events.StartGameEvent(l))
 
-        elif msg_id == 201:
+        elif msg_id == cmn.CARDS:
             try:
                 l = json.loads(msg)
             except ValueError:
@@ -177,7 +185,10 @@ class GameNetworkController(NetworkController):
                 return
             self._ev_manager.post(events.NewCardsEvent(l))
 
-        elif msg_id == 209:
+        elif msg_id == cmn.ASK_TRUMP:
+            self._ev_manager.post(events.AskTrumpEvent())
+
+        elif msg_id == cmn.FOUND_TRUMP:
             self._ev_manager.post(events.NewTrumpEvent(msg))
 
         else:
