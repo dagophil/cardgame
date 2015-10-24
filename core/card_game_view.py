@@ -258,7 +258,7 @@ class CardGameView(PygameView):
         :param n: the maximum number of tricks
         """
         # Create the container with the fade in effect.
-        container = Widget((self.screen.get_width()/2-200, 100), (400, self.screen.get_height()-120), 10)
+        container = Widget((self.screen.get_width()/2-200, 100), (400, self.screen.get_height()-120), 40)
         container.opacity = 0
         container.add_action(actions.FadeInAction(0.5))
         self._ask_tricks_widget = container
@@ -319,7 +319,7 @@ class CardGameView(PygameView):
         im_filename = get_card_image_filename(card)
         im = self._rm.get_image(im_filename)
         pos = self._player_positions[player]
-        im_w = ImageWidget((pos[0]-card_size[0]/2, pos[1]-card_size[1]/2), card_size, len(self._played_card_widgets), im)
+        im_w = ImageWidget((pos[0]-card_size[0]/2, pos[1]-card_size[1]/2), card_size, 20+len(self._played_card_widgets), im)
         self._background_widget.add_widget(im_w)
         x = self.screen.get_width()/2 - 200 + len(self._played_card_widgets) * 60
         y = 150 + len(self._played_card_widgets) * 10
@@ -365,7 +365,17 @@ class CardGameView(PygameView):
                 self._player_played_card(event.player, event.card)
 
         elif isinstance(event, events.WinTrickEvent):
+
+            class WidgetRemover(object):
+                def __init__(self, view, ww):
+                    self._view = view
+                    self._w = ww
+                def __call__(self):
+                    self._view._background_widget.remove_widget(self._w)
             for w in self._played_card_widgets:
-                self._background_widget.remove_widget(w)
+                a = actions.DelayedAction(4, actions.FadeOutAction(0.5))
+                a.handle_finished = WidgetRemover(self, w)
+                w.add_action(a)
+
             self._played_card_widgets = []
             logging.warning("TODO: Show that player %s won the trick." % event.player)
