@@ -1,4 +1,5 @@
 import numpy
+import logging
 
 
 class Action(object):
@@ -120,6 +121,40 @@ class FadeOutAction(Action):
             return True
         else:
             w.opacity *= new_t / last_t
+            return False
+
+
+class FadeInAction(Action):
+    """
+    Apply a fade in effect.
+    """
+
+    def __init__(self, time):
+        super(FadeInAction, self).__init__()
+        self.time = float(time)
+        self._elapsed_time = 0
+        self._init_opacity = None
+
+    @property
+    def _t(self):
+        return self._elapsed_time / self.time
+
+    def _act(self, w, elapsed_time):
+        """
+        Apply the fade in effect.
+        """
+        if self._init_opacity is None:
+            self._init_opacity = w.opacity
+        if not w.visible:
+            w.visible = True
+
+        self._elapsed_time += elapsed_time
+        t = self._t
+        if self._elapsed_time >= self.time:
+            w.opacity = 1
+            return True
+        else:
+            w.opacity = t + (1-t) * self._init_opacity
             return False
 
 

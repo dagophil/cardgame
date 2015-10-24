@@ -55,13 +55,14 @@ class ResourceManager(object):
             else:
                 try:
                     logging.debug("Loading image %s" % filename)
-                    im = pygame.image.load(filename).convert()
+                    im = pygame.image.load(filename).convert_alpha()
                 except pygame.error:
                     raise IOError("Could not load image %s." % filename)
                 self._images[(filename, (0, 0))] = im
-            logging.debug("Resizing image %s to (%d, %d)." % (filename, size[0], size[1]))
-            im = pygame.transform.smoothscale(im, size)
-            self._images[(filename, size)] = im
+            if size != (0, 0):
+                logging.debug("Resizing image %s to (%d, %d)." % (filename, size[0], size[1]))
+                im = pygame.transform.smoothscale(im, size)
+                self._images[(filename, size)] = im
             return im
 
     def get_font(self, font_name, size):

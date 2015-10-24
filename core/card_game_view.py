@@ -16,6 +16,36 @@ FONT_BOLD = "resources/fonts/opensans/OpenSans-Bold.ttf"
 FONT_SIZE = 16
 
 
+def get_card_image(card):
+    """
+    Return the filename of the image of the given card.
+    :param card: the card
+    :return: the filename
+    """
+    if "L" in card:
+        card_name = "loser"
+    elif "W" in card:
+        card_name = "wizard"
+    else:
+        card_name = card
+    s = "resources/card_deck/" + card_name + ".png"
+    return s
+
+
+def get_color_image(color):
+    """
+    Return the filename of the image of the given color.
+    :param color: the color
+    :return: the filename
+    """
+    if color == "W":
+        color_name = "all"
+    else:
+        color_name = color
+    s = "resources/colors/" + color_name + ".png"
+    return s
+
+
 def cmp_colors_first(a, b):
     """
     Compare two cards a, b for color sorting.
@@ -43,6 +73,8 @@ class CardGameView(PygameView):
         self._warnings = {}
         self.username = None
         self._player_positions = {}
+        self._card_widgets = {}
+        self._trump_widgets = {}
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -61,6 +93,23 @@ class CardGameView(PygameView):
         wait_box.visible = True
         bg_widget.add_widget(wait_box)
         self._warnings["wait_box"] = wait_box
+
+        # Create the chat widget.
+        chat_box = special_widgets.warning_widget((10, self.screen.get_height()-260), (260, 200), "chat", self._font,
+                                                  close_on_click=False)
+        chat_box.visible = True
+        bg_widget.add_widget(chat_box)
+
+        # Create the trump widgets.
+        trump_pos = (200, 180)
+        trump_size = (125, 125)
+        for color in ["W", "H", "D", "S", "C"]:
+            im_filename = get_color_image(color)
+            im = self._rm.get_image(im_filename, trump_size)
+            im_w = ImageWidget(trump_pos, trump_size, 0, im)
+            im_w.opacity = 0
+            bg_widget.add_widget(im_w)
+            self._trump_widgets[color] = im_w
 
         return bg_widget
 
@@ -109,8 +158,40 @@ class CardGameView(PygameView):
         Create the card widgets.
         :param cards: the cards
         """
+        self._card_widgets = {}
+        card_size = (130, 184)
+        x_min = 290
+        x_delta = 50
+        y = 400
         cards.sort(cmp_colors_first)
-        logging.warning("TODO: Show the cards %s in the view." % str(cards))
+        for i, card in enumerate(cards):
+            card_image_name = get_card_image(card)
+            im = self._rm.get_image(card_image_name)
+            w = ImageWidget((x_min+i*x_delta, y), card_size, i, im)
+            self._background_widget.add_widget(w)
+            self._card_widgets[card] = w
+
+    def _show_trump(self, trump):
+        """
+        Show the trump widget.
+        :param trump: the trump
+        """
+        visible_w = None
+        for w_name in self._trump_widgets:
+            w = self._trump_widgets[w_name]
+            if w.visible:
+                visible_w = w
+
+        def fade_in_new_trump():
+            if trump != "L":
+                self._trump_widgets[trump].add_action(actions.FadeInAction(0.5))
+
+        if visible_w is None:
+            fade_in_new_trump()
+        else:
+            a = actions.FadeOutAction(0.5)
+            a.handle_finished = fade_in_new_trump
+            visible_w.add_action(a)
 
     def notify(self, event):
         """
@@ -127,4 +208,4 @@ class CardGameView(PygameView):
             self._show_cards(event.cards)
 
         elif isinstance(event, events.NewTrumpEvent):
-            logging.warning("TODO: Show the trump in the view.")
+            self._show_trump(event.trump)
