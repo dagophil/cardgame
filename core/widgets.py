@@ -120,11 +120,16 @@ class Widget(object):
         :param x: x coordinate
         :param y: y coordinate
         """
+        previously_hovered = self.hovered
         self.hovered = self.contains(x, y)
         x -= self.position[0]
         y -= self.position[1]
         for w in self._widgets:
             w.hover(x, y)
+        if previously_hovered and not self.hovered:
+            self.handle_mouse_leave()
+        if not previously_hovered and self.hovered:
+            self.handle_mouse_enter()
         if self.hovered:
             self.handle_hover(x, y)
 
@@ -185,6 +190,18 @@ class Widget(object):
         Callback for occurring hover events.
         :param x: x coordinate
         :param y: y coordinate
+        """
+        pass
+
+    def handle_mouse_enter(self):
+        """
+        Callback for the mouse enter event.
+        """
+        pass
+
+    def handle_mouse_leave(self):
+        """
+        Callback for the mouse leave event.
         """
         pass
 
@@ -366,6 +383,52 @@ class ImageWidget(Widget):
         """
         surface.blit(self.image, (0, 0))
         super(ImageWidget, self)._render(surface)
+
+
+class Text(Widget):
+    """
+    A widget to show text.
+    """
+
+    def __init__(self, position, size, z_index, text, font, centered=True, color=(255, 255, 255, 255),
+                 fill=(0, 0, 0, 0), *args, **kwargs):
+        super(Text, self).__init__(position, size, z_index, *args, **kwargs)
+        self.text = text
+        self.font = font
+        self.centered = centered
+        self.color = color
+        self.fill = fill
+        if not centered:
+            logging.warning("Text Widget is only implemented for centered text.")
+        # TODO:
+        # Add "finalized" property, that draws the text to an image and renders that image instead of always
+        # re-rendering the text.
+
+    def _render(self, surface):
+        """
+        Render the text.
+        :param surface: the surface
+        """
+        tmp = pygame.Surface(surface.get_size(), flags=pygame.SRCALPHA)
+        tmp.blit(surface, (0, 0))
+        tmp.fill(self.fill)
+        font_obj = self.font.render(self.text, True, self.color)
+        x = (surface.get_width() - font_obj.get_width()) / 2
+        y = (surface.get_height() - font_obj.get_height()) / 2
+        if x < 0 and y < 0:
+            x = 0
+            y = 0
+            s = font_obj.subsurface((-x, -y), surface.get_size())
+        elif x < 0:
+            x = 0
+            s = font_obj.subsurface((-x, 0), (surface.get_width(), font_obj.get_height()))
+        elif y < 0:
+            y = 0
+            s = font_obj.subsurface((0, -y), (font_obj.get_width(), surface.get_height()))
+        else:
+            s = font_obj
+        tmp.blit(s, (x, y))
+        surface.blit(tmp, (0, 0))
 
 
 class TextInput(Widget):
