@@ -29,6 +29,9 @@ class CardGameController(PygameController):
         """
         super(CardGameController, self).notify(event)
 
+        # Some view changes shall first be seen some time after the last win.
+        delta_time = self._view.last_win_time + 4 - self._view.elapsed_time
+
         if isinstance(event, events.InitModelEvent):
             self._network_controller.buffer_messages = False
 
@@ -38,19 +41,39 @@ class CardGameController(PygameController):
         # elif isinstance(event, events.StartGameEvent):
 
         elif isinstance(event, events.NewCardsEvent):
-            self._view.show_cards(event.cards)
+            if delta_time > 0:
+                call_event = events.CallFunctionEvent(self._view.show_cards, event.cards)
+                self._ev_manager.post(events.DelayedEvent(delta_time, call_event))
+            else:
+                self._view.show_cards(event.cards)
 
         elif isinstance(event, events.NewTrumpEvent):
-            self._view.show_trump(event.trump)
+            if delta_time > 0:
+                call_event = events.CallFunctionEvent(self._view.show_trump, event.trump)
+                self._ev_manager.post(events.DelayedEvent(delta_time, call_event))
+            else:
+                self._view.show_trump(event.trump)
 
         elif isinstance(event, events.AskTrumpEvent):
-            self._view.ask_trump()
+            if delta_time > 0:
+                call_event = events.CallFunctionEvent(self._view.ask_trump)
+                self._ev_manager.post(events.DelayedEvent(delta_time, call_event))
+            else:
+                self._view.ask_trump()
 
         elif isinstance(event, events.AskTricksEvent):
-            self._view.ask_tricks(event.n)
+            if delta_time > 0:
+                call_event = events.CallFunctionEvent(self._view.ask_tricks, event.n)
+                self._ev_manager.post(events.DelayedEvent(delta_time, call_event))
+            else:
+                self._view.ask_tricks(event.n)
 
         elif isinstance(event, events.InvalidNumTricksEvent):
             self._view.show_invalid_num_tricks(event.n)
 
         elif isinstance(event, events.AskCardEvent):
-            self._view.user_move = True
+            if delta_time > 0:
+                call_event = events.CallFunctionEvent(self._view.show_user_move)
+                self._ev_manager.post(events.DelayedEvent(delta_time, call_event))
+            else:
+                self._view.show_user_move()

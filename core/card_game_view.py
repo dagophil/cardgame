@@ -69,6 +69,8 @@ def cmp_colors_first(a, b):
 class CardGameView(PygameView):
 
     def __init__(self, ev_manager):
+        self.elapsed_time = 0
+        self.last_win_time = -5
         self._rm = ResourceManager.instance()
         self._font = self._rm.get_font(FONT, FONT_SIZE)
         self._warnings = {}
@@ -279,7 +281,7 @@ class CardGameView(PygameView):
                 self._view._handle_say_tricks(self._n)
         for i in xrange(n+1):
             size = (50, 50)
-            pos = ((i % 5) * (size[0]+20), 80 + (i/5) * (size[1] + 20))
+            pos = ((i % 6) * (size[0]+20), 80 + (i/6) * (size[1] + 20))
             w = special_widgets.warning_widget(pos, size, str(i), self._font, close_on_click=False)
             w.visible = True
             w.handle_clicked = ChooseHandler(self, i)
@@ -326,6 +328,13 @@ class CardGameView(PygameView):
         im_w.add_action(actions.MoveToAction((x, y), 1))
         self._played_card_widgets.append(im_w)
 
+    def show_user_move(self):
+        """
+        Show some info that it is the user's turn.
+        """
+        self.user_move = True
+        logging.warning("TODO: Show that it is the user's turn.")
+
     def notify(self, event):
         """
         Handle the event.
@@ -333,7 +342,10 @@ class CardGameView(PygameView):
         """
         super(CardGameView, self).notify(event)
 
-        if isinstance(event, events.StartGameEvent):
+        if isinstance(event, events.TickEvent):
+            self.elapsed_time += event.elapsed_time
+
+        elif isinstance(event, events.StartGameEvent):
             self._warnings["wait_box"].add_action(actions.FadeOutAction(0.5))
             self._show_player_order(event.player_order)
 
@@ -378,4 +390,5 @@ class CardGameView(PygameView):
                 w.add_action(a)
 
             self._played_card_widgets = []
+            self.last_win_time = self.elapsed_time
             logging.warning("TODO: Show that player %s won the trick." % event.player)

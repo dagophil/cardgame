@@ -1,6 +1,5 @@
 import collections
 import logging
-import threading
 
 
 class Event(object):
@@ -166,6 +165,23 @@ class PlayerPlayedCardEvent(Event):
         self.card = card
 
 
+class DelayedEvent(Event):
+    def __init__(self, time, event):
+        self.time = time
+        self.event = event
+
+
+class CallFunctionEvent(Event):
+    """
+    If a CallFunctionEvent is posted on the event manager, the event manager simply calls the function with the stored
+    arguments. These events are useful in combination with DelayedEvent.
+    """
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+
 class EventManager(object):
     """
     Receives event and post them to the listeners.
@@ -175,7 +191,7 @@ class EventManager(object):
         self._listeners = {}
         self._queue = collections.deque()
         self._next_id = 0
-        self._sem = threading.Semaphore()
+        self._delayed_events = []
         self.next_model_name = None
         self.next_model_args = ()
         self.next_model_kwargs = {}
@@ -206,17 +222,39 @@ class EventManager(object):
         Add an event to the event queue.
         :param event: the event
         """
-        self._queue.append(event)
+        # If a CallFunctionEvent is posted, simply call the function.
+        if isinstance(event, CallFunctionEvent):
+            event.func(*event.args, **event.kwargs)
+            return
+
+        # Delayed events are handled in a separate list.
+        if isinstance(event, DelayedEvent):
+            self._delayed_events.append(event)
+        else:
+            self._queue.append(event)
+
+        # Update the timestamp on the delayed events. Post them to the real queue, if their time has come.
+        if isinstance(event, TickEvent):
+            for ev in self._delayed_events:
+                assert isinstance(ev, DelayedEvent)
+                ev.time -= event.elapsed_time
+                if ev.time <= 0:
+                    ev.time = 0
+                    self.post(ev.event)
+            self._delayed_events = [ev for ev in self._delayed_events if ev.time > 0]
+
         if isinstance(event, TickEvent) or isinstance(event, InitModelEvent):
             while len(self._queue) > 0:
                 ev = self._queue.popleft()
                 # Iterate over a copy of the dict, so even from within the loop, listeners can delete themselves.
                 for l in list(self._listeners):
                     l.notify(ev)
+
         elif isinstance(event, CloseCurrentModelEvent):
             self.next_model_name = event.next_model_name
             self.next_model_args = event.next_model_args
             self.next_model_kwargs = event.next_model_kwargs
+
         elif isinstance(event, AppCrashedEvent):
             for l in list(self._listeners):
                 l.notify(event)
