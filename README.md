@@ -1,10 +1,10 @@
 ## A python implementation of a card game.
-Soon, you can play a famous card game online.
+Play cards with friends over network.
 
 ### What is done so far (newest on top):
-- The server is complete.
-- The server gives cards to the players, chooses a trump, eventually asks the first player for the trump and asks each player for the number of tricks that they make. The corresponding responses are implemented as well.
-- The messaging part of the server (initial handshake, waiting for username, exchange of messages of the format `"msg_id#msg"`.
+- Added windows binary.
+- Server and client are in a working state.
 
 ### TODO:
-- Implement the client.
+- Implement the chat.
+- Make the client look better.
