@@ -129,5 +129,10 @@ class LoginController(PygameController):
             self._ev_manager.post(ev)
             # TODO: Maybe do a smooth blending instead of the hard cut.
 
+            # Save the login data.
+            with open(self._login_filename, "w") as f:
+                f.write("username: %s\nhost: %s\nport: %s\n" %
+                        (self._model.username, self._model.host, self._model.port))
+
         elif isinstance(event, events.CloseCurrentModelEvent):
             self._ev_manager.unregister_listener(self)
