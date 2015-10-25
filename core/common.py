@@ -102,10 +102,7 @@ def handshake_fun(x):
     :param x: some number
     :return: transformation of x
     """
-    # TODO: Change this to something more complicated.
-    logging.warning("TODO: Change the handshake function.")
-    return x
-    # return 3*x+1
+    return (x+17)*3-5
 
 
 class ColoredFormatter(logging.Formatter):

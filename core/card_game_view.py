@@ -80,10 +80,26 @@ class CardGameView(PygameView):
         self._trump_widgets = {}
         self._choose_trump_widget = None
         self._ask_tricks_widget = None
-        self.user_move = False
+        self._user_move = False
         self._played_card_widgets = []
+        self._user_move_widget = None
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
+
+    @property
+    def user_move(self):
+        return self._user_move
+
+    @user_move.setter
+    def user_move(self, b):
+        if b:
+            self._user_move_widget.opacity = 0
+            self._user_move_widget.clear_actions()
+            self._user_move_widget.add_action(actions.FadeInAction(0.5))
+        else:
+            self._user_move_widget.clear_actions()
+            self._user_move_widget.add_action(actions.FadeOutAction(0.5))
+        self._user_move = b
 
     def _create_widgets(self):
         """
@@ -112,6 +128,12 @@ class CardGameView(PygameView):
                                                   close_on_click=False)
         chat_box.visible = True
         bg_widget.add_widget(chat_box)
+
+        # Create the "Your move" box.
+        your_move_w = special_widgets.warning_widget((self.screen.get_width()-140, self.screen.get_height()-60),
+                                                     (120, 40), "Your move", self._font, close_on_click=False)
+        bg_widget.add_widget(your_move_w)
+        self._user_move_widget = your_move_w
 
         # Create the trump widgets.
         trump_pos = (180, 180)
@@ -333,7 +355,6 @@ class CardGameView(PygameView):
         Show some info that it is the user's turn.
         """
         self.user_move = True
-        logging.warning("TODO: Show that it is the user's turn.")
 
     def notify(self, event):
         """
@@ -356,10 +377,6 @@ class CardGameView(PygameView):
 
         elif isinstance(event, events.PlayerSaidTricksEvent):
             # TODO: Show the number of tricks that the player said.
-            pass
-
-        elif isinstance(event, events.AskCardEvent):
-            # TODO: Show a message that it is the user's move.
             pass
 
         elif isinstance(event, events.SayCardEvent):
