@@ -171,6 +171,11 @@ class DelayedEvent(Event):
         self.event = event
 
 
+class RoundPointsEvent(Event):
+    def __init__(self, points):
+        self.points = points
+
+
 class CallFunctionEvent(Event):
     """
     If a CallFunctionEvent is posted on the event manager, the event manager simply calls the function with the stored

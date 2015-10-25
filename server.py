@@ -575,8 +575,8 @@ class WizardGame(object):
         if len(winners) == 1:
             logging.info("The winners: %s." % ", ".join(w[0] for w in winners))
 
-        # Exit the game.
-        reactor.stop()
+        # Wait a few seconds, so that the network messages can be sent, then exit the game.
+        reactor.callLater(5, reactor.stop)
 
 
 class ClientConnector(Factory):

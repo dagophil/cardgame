@@ -215,5 +215,9 @@ class GameNetworkController(NetworkController):
         elif msg_id == cmn.WINS_TRICK:
             self._ev_manager.post(events.WinTrickEvent(msg))
 
+        elif msg_id == cmn.MADE_POINTS:
+            points = json.loads(msg)
+            self._ev_manager.post(events.RoundPointsEvent(points))
+
         else:
             logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))

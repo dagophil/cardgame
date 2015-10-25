@@ -84,6 +84,7 @@ class CardGameView(PygameView):
         self._played_card_widgets = []
         self._said_tricks_widgets = {}
         self._user_move_widget = None
+        self._player_order = None
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -382,6 +383,36 @@ class CardGameView(PygameView):
         """
         self.user_move = True
 
+    def show_round_points(self, points):
+        """
+        Show the points that each player made in that trick.
+        """
+        texts = []
+        for point, player in zip(points, self._player_order):
+            if point >= 0:
+                texts.append("%s made %d points." % (player, point))
+            else:
+                texts.append("%s lost %d points." % (player, -point))
+        x = self.screen.get_width()/2-200
+        y = 150
+        yd = 40
+
+        ws = []
+        for i, text in enumerate(texts):
+            w = Text((x, y+i*yd), (400, 40), 50, text, self._font, fill=(0, 0, 0, 160))
+            w.opacity = 0
+            fade_in = actions.FadeInAction(0.5)
+            fade_out = actions.DelayedAction(3, actions.FadeOutAction(0.5))
+            w.add_action(actions.ChainedAction(fade_in, fade_out))
+            self._background_widget.add_widget(w)
+            ws.append(w)
+
+        def remove_widgets():
+            for w in ws:
+                self._background_widget.remove_widget(w)
+
+        self._ev_manager.post(events.DelayedEvent(4, events.CallFunctionEvent(remove_widgets)))
+
     def notify(self, event):
         """
         Handle the event.
@@ -394,6 +425,7 @@ class CardGameView(PygameView):
 
         elif isinstance(event, events.StartGameEvent):
             self._warnings["wait_box"].add_action(actions.FadeOutAction(0.5))
+            self._player_order = event.player_order
             self._show_player_order(event.player_order)
 
         elif isinstance(event, events.SayTricksEvent):

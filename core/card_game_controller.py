@@ -30,7 +30,7 @@ class CardGameController(PygameController):
         super(CardGameController, self).notify(event)
 
         # Some view changes shall first be seen some time after the last win.
-        delta_time = self._view.last_win_time + 4 - self._view.elapsed_time
+        delta_time = self._view.last_win_time + 5 - self._view.elapsed_time
 
         if isinstance(event, events.InitModelEvent):
             self._network_controller.buffer_messages = False
@@ -77,3 +77,7 @@ class CardGameController(PygameController):
                 self._ev_manager.post(events.DelayedEvent(delta_time, call_event))
             else:
                 self._view.show_user_move()
+
+        elif isinstance(event, events.RoundPointsEvent):
+            call_event = events.CallFunctionEvent(self._view.show_round_points, event.points)
+            self._ev_manager.post(events.DelayedEvent(1, call_event))
