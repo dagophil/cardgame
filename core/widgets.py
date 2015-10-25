@@ -310,7 +310,7 @@ class Widget(object):
                 # Apply the transparency.
                 if self.opacity < 1:
                     alphas = pygame.surfarray.pixels_alpha(s)
-                    alphas *= self.opacity
+                    alphas[:] = (alphas * self.opacity).astype(alphas.dtype)
                     del alphas
 
                 # Get the visible area.
