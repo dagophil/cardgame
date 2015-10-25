@@ -131,7 +131,7 @@ class CardGameView(PygameView):
         bg_widget.add_widget(chat_box)
 
         # Create the "Your move" box.
-        your_move_w = Text((self.screen.get_width()-140, self.screen.get_height()-60), (120, 40), 0, "Your move",
+        your_move_w = Text((self.screen.get_width()-140, self.screen.get_height()-110), (120, 40), 0, "Your move",
                            self._font, fill=(0, 0, 0, 160))
         your_move_w.opacity = 0
         bg_widget.add_widget(your_move_w)
@@ -202,6 +202,7 @@ class CardGameView(PygameView):
                 x = int(cx - math.cos(d) * rx)
                 y = int(cy - math.sin(d) * ry)
                 self._player_positions[p] = (x, y)
+        self._player_positions[self.username] = self.screen.get_size()
 
         # Show the other players.
         # TODO: The widget size should adapt to the length of the player name.
@@ -214,20 +215,33 @@ class CardGameView(PygameView):
             self._background_widget.add_widget(w)
 
         # Add the box for the said tricks.
+        width = 80
         for p in player_order:
             pos = self._player_positions[p]
-            x = pos[0] + width/2 + 10
-            y = pos[1] - height/2
-            w = Text((x, y), (80, height), 50, "0/0", self._font, fill=(0, 0, 0, 160))
+            x = pos[0] - width/2
+            y = pos[1] + height/2 + 10
+            w = Text((x, y), (width, height), 50, "0/0", self._font, fill=(0, 0, 0, 160))
             w.opacity = 0
             self._said_tricks_widgets[p] = w
             self._background_widget.add_widget(w)
+        height = 40
+        x = self._user_move_widget.position[0] + self._user_move_widget.size[0] - width
+        y = self._user_move_widget.position[1] + self._user_move_widget.size[1] + 10
+        w = Text((x, y), (width, height), 50, "0 / 0", self._font, fill=(0, 0, 0, 160))
+        w.opacity = 0
+        self._said_tricks_widgets[self.username] = w
+        self._background_widget.add_widget(w)
 
     def show_cards(self, cards):
         """
         Create the card widgets.
         :param cards: the cards
         """
+        # Hide the said tricks widgets.
+        for w in self._said_tricks_widgets.values():
+            w.clear_actions()
+            w.add_action(actions.FadeOutAction(0.5))
+
         self._card_widgets = {}
         card_size = (130, 184)
         x_min = 290
@@ -388,8 +402,10 @@ class CardGameView(PygameView):
             self._ask_tricks_widget = None
 
         elif isinstance(event, events.PlayerSaidTricksEvent):
-            # TODO: Show the number of tricks that the player said.
-            pass
+            w = self._said_tricks_widgets[event.player]
+            w.text = "0 / %d" % event.n
+            w.clear_actions()
+            w.add_action(actions.FadeInAction(0.5))
 
         elif isinstance(event, events.SayCardEvent):
             x = self.screen.get_width()/2 - 200 + len(self._played_card_widgets) * 60
@@ -414,10 +430,16 @@ class CardGameView(PygameView):
                 def __call__(self):
                     self._view._background_widget.remove_widget(self._w)
             for w in self._played_card_widgets:
-                a = actions.DelayedAction(4, actions.FadeOutAction(0.5))
+                target_pos = tuple(b-b0/2 for b, b0 in zip(self._player_positions[event.player], w.size))
+                move_and_fade = actions.ChainedAction(actions.MoveToAction(target_pos, 1), actions.FadeOutAction(0.5))
+                a = actions.DelayedAction(4, move_and_fade)
                 a.handle_finished = WidgetRemover(self, w)
                 w.add_action(a)
 
             self._played_card_widgets = []
             self.last_win_time = self.elapsed_time
-            logging.warning("TODO: Show that player %s won the trick." % event.player)
+
+            w = self._said_tricks_widgets[event.player]
+            current_tricks, said_tricks = tuple(int(x) for x in w.text.split(" / "))
+            w.text = "%d / %d" % (current_tricks+1, said_tricks)
+            # logging.warning("TODO: Show that player %s won the trick." % event.player)
