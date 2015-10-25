@@ -81,3 +81,11 @@ class CardGameController(PygameController):
         elif isinstance(event, events.RoundPointsEvent):
             call_event = events.CallFunctionEvent(self._view.show_round_points, event.points)
             self._ev_manager.post(events.DelayedEvent(1, call_event))
+
+        elif isinstance(event, events.FinalWinnersEvent):
+            self._view.final_winners = [w[0] for w in event.winners]
+            call_event = events.CallFunctionEvent(self._view.show_final_points)
+            self._ev_manager.post(events.DelayedEvent(6, call_event))
+
+        elif isinstance(event, events.FinalPointsEvent):
+            self._view.final_points = event.points

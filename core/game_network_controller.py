@@ -219,5 +219,13 @@ class GameNetworkController(NetworkController):
             points = json.loads(msg)
             self._ev_manager.post(events.RoundPointsEvent(points))
 
+        elif msg_id == cmn.FINAL_WINNERS:
+            winners = json.loads(msg)
+            self._ev_manager.post(events.FinalWinnersEvent(winners))
+
+        elif msg_id == cmn.FINAL_POINTS:
+            points = json.loads(msg)
+            self._ev_manager.post(events.FinalPointsEvent(points))
+
         else:
             logging.warning("TODO: Handle message (%d, %s)" % (msg_id, msg))

@@ -85,6 +85,8 @@ class CardGameView(PygameView):
         self._said_tricks_widgets = {}
         self._user_move_widget = None
         self._player_order = None
+        self.final_winners = None
+        self.final_points = None
         bg_widget = self._create_widgets()
         super(CardGameView, self).__init__(ev_manager, bg_widget)
 
@@ -393,10 +395,10 @@ class CardGameView(PygameView):
                 texts.append("%s made %d points." % (player, point))
             else:
                 texts.append("%s lost %d points." % (player, -point))
+
         x = self.screen.get_width()/2-200
         y = 150
         yd = 40
-
         ws = []
         for i, text in enumerate(texts):
             w = Text((x, y+i*yd), (400, 40), 50, text, self._font, fill=(0, 0, 0, 160))
@@ -412,6 +414,27 @@ class CardGameView(PygameView):
                 self._background_widget.remove_widget(w)
 
         self._ev_manager.post(events.DelayedEvent(4, events.CallFunctionEvent(remove_widgets)))
+
+    def show_final_points(self):
+        """
+        Show the final winners and the final points.
+        """
+        if len(self.final_winners) == 1:
+            texts = ["Final winner: %s" % self.final_winners[0]]
+        else:
+            texts = ["Final winners: %s" % ", ".join(self.final_winners)]
+        texts.append("")
+        for point, player in zip(self.final_points, self._player_order):
+            texts.append("%s: %s" % (player, point))
+
+        x = self.screen.get_width()/2-200
+        y = 150
+        yd = 40
+        for i, text in enumerate(texts):
+            w = Text((x, y+i*yd), (400, 40), 50, text, self._font, fill=(0, 0, 0, 160))
+            w.opacity = 0
+            w.add_action(actions.FadeInAction(0.5))
+            self._background_widget.add_widget(w)
 
     def notify(self, event):
         """
