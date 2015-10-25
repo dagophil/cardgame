@@ -4,3 +4,4 @@ _old/
 *.pyc
 resources/card_deck_BACKUP/
 resources/raw/
+dist/
