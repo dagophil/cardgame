@@ -49,6 +49,7 @@ class CardGameModel(object):
 
         elif isinstance(event, events.UserSaysCardEvent):
             played_colors = [card[0] for card in self._played_cards if card[0] not in ["W", "L"]]
+
             if len(played_colors) > 0:
                 # Some has played a suit.
                 follow_suit = played_colors[0][0]
@@ -58,6 +59,7 @@ class CardGameModel(object):
                     if follow_suit in player_colors:
                         self._ev_manager.post(events.NotFollowedSuitEvent())
                         return
+
             self._ev_manager.post(events.SayCardEvent(event.card))
 
         elif isinstance(event, events.WinTrickEvent):
@@ -65,6 +67,10 @@ class CardGameModel(object):
 
         elif isinstance(event, events.SayCardEvent):
             self._played_cards.append(event.card)
+            if event.card in self._cards:
+                self._cards.remove(event.card)
+            else:
+                logging.warning("Tried to remove the card %s from the played cards, but it is not in the list.")
 
         elif isinstance(event, events.PlayerPlayedCardEvent):
             self._played_cards.append(event.card)
