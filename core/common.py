@@ -1,6 +1,7 @@
 import string
 import logging
 import colorama
+colorama.init()
 
 
 # colorama shortcuts.
