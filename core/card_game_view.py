@@ -442,4 +442,3 @@ class CardGameView(PygameView):
             w = self._said_tricks_widgets[event.player]
             current_tricks, said_tricks = tuple(int(x) for x in w.text.split(" / "))
             w.text = "%d / %d" % (current_tricks+1, said_tricks)
-            # logging.warning("TODO: Show that player %s won the trick." % event.player)
