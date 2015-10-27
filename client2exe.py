@@ -83,7 +83,7 @@ class BuildExe:
         self.zipfile_name = None
  
         #Dist directory
-        self.dist_dir ='dist'
+        self.dist_dir ='dist_client'
  
     ## Code from DistUtils tutorial at http://wiki.python.org/moin/Distutils/Tutorial
     ## Originally borrowed from wxPython's setup and config files
@@ -155,10 +155,10 @@ class BuildExe:
             options = {'py2exe': {'optimize': 2, 'bundle_files': 1, 'compressed': True, \
                                   'excludes': self.exclude_modules, 'packages': self.extra_modules, \
                                   'dll_excludes': self.exclude_dll,
-                                  'includes': self.extra_scripts} },
+                                  'includes': self.extra_scripts,
+                                  'dist_dir': self.dist_dir} },
             zipfile = self.zipfile_name,
-            data_files = extra_datas,
-            dist_dir = self.dist_dir
+            data_files = extra_datas
             )
         
         if os.path.isdir('build'): #Clean up build dir
